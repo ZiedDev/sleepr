@@ -1,5 +1,5 @@
-import styles from "@/styles/home/sleepButton.module.css";
+import styles from "@/styles/home.module.css";
 
 export default function SleepButton() {
-  return <button className="sleep-button">Sleep</button>;
+  return <button className={styles.sleepButton}>Sleep</button>;
 }

@@ -1,13 +1,14 @@
-import styles from "@/styles/navbar.module.css";
+import styles from "@/styles/home.module.css";
+
 import {
-  PhHouse as HouseIcon,
-  PhGearFine as GearIcon,
-  PhChartBar as ChartIcon,
+  PhHouseBold as HouseIcon,
+  PhGearFineBold as GearIcon,
+  PhChartBarBold as ChartIcon,
 } from "./icones";
 
 export default function NavBar() {
   return (
-    <nav>
+    <nav className={`${styles.nav} glassCard`}>
       <button>
         <ChartIcon />
         <p>Statistics</p>

@@ -1,9 +1,9 @@
-import styles from "@/styles/home/header.module.css";
+import styles from "@/styles/home.module.css";
 
 export default function Header() {
   return (
-    <header id="home-header">
-      <div className="logo">Sleepr</div>
+    <header id={styles.homeHeader}>
+      <div className={styles.logo}>Sleepr</div>
     </header>
   );
 }
