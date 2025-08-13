@@ -1,26 +1,37 @@
-import styles from "@/styles/home.module.css";
+import styles from "@/styles/navbar.module.css";
 
 import {
   PhHouseBold as HouseIcon,
   PhGearFineBold as GearIcon,
   PhChartBarBold as ChartIcon,
 } from "./icones";
+import { useState } from "react";
 
 export default function NavBar() {
+  const [navMode, setNavMode] = useState(1);
+
+  const navContents = [
+    { label: "Statistics", icon: ChartIcon },
+    { label: "Home", icon: HouseIcon },
+    { label: "Settings", icon: GearIcon },
+  ];
+
   return (
-    <nav className={`${styles.nav} glassCard`}>
-      <button>
-        <ChartIcon />
-        <p>Statistics</p>
-      </button>
-      <button>
-        <HouseIcon />
-        <p>Home</p>
-      </button>
-      <button>
-        <GearIcon />
-        <p>Settings</p>
-      </button>
+    <nav
+      className={`${styles.nav} glassCard`}
+      style={{ "--item-num": navContents.length, "--item-selected": navMode }}
+    >
+      {navContents.map((item, index) => (
+        <button
+          className={navMode == index ? styles.active : ""}
+          key={index}
+          onClick={() => setNavMode(index)}
+        >
+          <item.icon />
+          <p>{item.label}</p>
+        </button>
+      ))}
+      <div className={styles.selector}></div>
     </nav>
   );
 }
