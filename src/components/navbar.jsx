@@ -5,11 +5,8 @@ import {
   PhGearFineBold as GearIcon,
   PhChartBarBold as ChartIcon,
 } from "./icones";
-import { useState } from "react";
 
-export default function NavBar() {
-  const [navMode, setNavMode] = useState(1);
-
+export default function NavBar({ navMode, setNavMode }) {
   const navContents = [
     { label: "Statistics", icon: ChartIcon },
     { label: "Home", icon: HouseIcon },
