@@ -1,7 +1,5 @@
 .page {
     height: 100dvh;
-    background: #020024;
-    background: linear-gradient(19deg, rgba(2, 0, 36, 1) 0%, rgb(35, 2, 58) 35%, rgb(18, 0, 39) 100%);
     padding: 1rem;
 }
 

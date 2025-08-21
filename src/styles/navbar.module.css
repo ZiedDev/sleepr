@@ -72,6 +72,6 @@
             inset 0 -1px 0 rgba(255, 255, 255, 0.025),
             inset 0 0 0px 0px rgba(255, 255, 255, 0);
 
-        transition: left 500ms cubic-bezier(.47, .02, .63, 1.32);
+        transition: left 500ms cubic-bezier(.5, .05, .53, 1.3);
     }
 }

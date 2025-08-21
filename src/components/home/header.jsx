@@ -6,7 +6,13 @@ export default function Header() {
   return (
     <header id={styles.homeHeader}>
       <div className={styles.logo}>
-        <Image src="/images/Logo.png" width={260} height={100} alt="Logo" />
+        <Image
+          src="/images/Logo.png"
+          priority={true}
+          width={260}
+          height={100}
+          alt="Logo"
+        />
       </div>
     </header>
   );
