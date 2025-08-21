@@ -4,7 +4,7 @@ import styles from "@/styles/home.module.css";
 
 export default function Header() {
   return (
-    <header id={styles.homeHeader}>
+    <header>
       <div className={styles.logo}>
         <Image
           src="/images/Logo.png"

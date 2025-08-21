@@ -9,11 +9,12 @@ import SettingsPage from "@/components/settings";
 import StatsPage from "@/components/stats";
 import NavBar from "@/components/navbar";
 
-import styles from "@/styles/home.module.css";
-
 export default function Home() {
-  const [navMode, setNavMode] = useState(1);
-  const [currentPage, setCurrentPage] = useState(1);
+  // will remove this var later
+  const defaultPage = 0;
+
+  const [navMode, setNavMode] = useState(defaultPage);
+  const [currentPage, setCurrentPage] = useState(defaultPage);
   const pages = {
     0: <StatsPage />,
     1: <HomePage />,
@@ -22,7 +23,7 @@ export default function Home() {
 
   useGSAP(
     () => {
-      gsap.to(`.${styles.page}`, {
+      gsap.to(`.page`, {
         x: navMode > currentPage ? -15 : navMode < currentPage ? 15 : 0,
         opacity: navMode != currentPage ? 0 : 1,
         ease: ".5, .05, .53, 1.3",
@@ -32,7 +33,7 @@ export default function Home() {
           setCurrentPage(navMode); // the only non animation line
 
           gsap.fromTo(
-            `.${styles.page}`,
+            `.page`,
             {
               x: navMode > currentPage ? 15 : navMode < currentPage ? -15 : 0,
               opacity: navMode != currentPage ? 0 : 1,
@@ -53,7 +54,7 @@ export default function Home() {
 
   return (
     <>
-      <div className={styles.page}>{pages[currentPage]}</div>
+      <div className="page">{pages[currentPage]}</div>
       <NavBar navMode={navMode} setNavMode={setNavMode} />
     </>
   );

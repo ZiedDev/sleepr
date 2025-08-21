@@ -60,3 +60,8 @@ button {
     inset 0 0 0px 0px rgba(255, 255, 255, 0);
   overflow: hidden;
 }
+
+.page {
+  height: 100dvh;
+  padding: 1rem;
+}

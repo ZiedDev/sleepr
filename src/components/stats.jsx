@@ -1,10 +1,11 @@
-import Header from "@/components/home/header";
+import Header from "@/components/stats/header";
+import Grid from "@/components/stats/grid";
 
 export default function StatsPage() {
   return (
     <>
       <Header />
-      <h1>Statistics</h1>
+      <Grid />
     </>
   );
 }

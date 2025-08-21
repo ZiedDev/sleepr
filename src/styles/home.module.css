@@ -1,10 +1,8 @@
-.page {
-    height: 100dvh;
-    padding: 1rem;
-}
-
 .logo {
-    width: 10rem;
+    aspect-ratio: 2.5;
+    height: 4rem;
+    display: flex;
+    align-items: end;
 
     img {
         width: 100%;
