@@ -468,13 +468,25 @@ class Logic {
                 return null;
             },
 
-            async getAllSessions(input) {
-                let records;
-                if (Array.isArray(input)) records = input;
-                else if (input && typeof input === 'object') {
-                    const { rangeStart, rangeEnd, dayStart = 0 } = input;
+            async getAllSessions(input, dayStart = 0) {
+                let records, rangeStart, rangeEnd;
+                if (Array.isArray(input)) {
+                    records = input;
+                    if (!records || records.length === 0) throw new Error("0 records in input");
+                    const recordEnds = records.map(r => r.end);
+                    [rangeStart, rangeEnd] = [Math.min(...recordEnds), Math.max(...recordEnds)];
+                } else if (input && typeof input === 'object') {
+                    ({ rangeStart, rangeEnd } = input);
                     records = await self.sleepSession.list({ rangeStart, rangeEnd });
+                    if (!records || records.length === 0) throw new Error("0 records in input");
+                    [rangeStart, rangeEnd] = [toEpochSec(rangeStart), toEpochSec(rangeEnd)];
+                    records.forEach(r => {
+                        r.start = Math.max(rangeStart, Math.min(rangeEnd, r.start));
+                        r.end = Math.max(rangeStart, Math.min(rangeEnd, r.end));
+                    });
                 } else throw new Error('input must be be either array of records or object');
+
+
 
                 return null;
             },
