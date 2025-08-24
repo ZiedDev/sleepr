@@ -367,6 +367,26 @@ class Logic {
                 return record;
             },
 
+            async _runConcurrent(tasks, limit = 5, delay = 50) {
+                const results = [];
+                const executing = new Set();
+
+                for (const task of tasks) {
+                    const p = task().then(res => {
+                        executing.delete(p);
+                        return res;
+                    });
+
+                    results.push(p);
+                    executing.add(p);
+
+                    if (executing.size >= limit) await Promise.race(executing);
+                    if (delay > 0) await new Promise(resolve => setTimeout(resolve, delay));
+                };
+
+                return Promise.all(results);
+            },
+
             async requestList({ rangeStart, rangeEnd, lat, lon } = {}) {
                 const cached = await this.list({ rangeStart, rangeEnd, lat, lon });
                 const cachedMap = new Map(cached.map(r => [r.date, r]));
@@ -374,21 +394,25 @@ class Logic {
                 [rangeStart, rangeEnd] = [rangeStart, rangeEnd].map(toEpochSec);
 
                 const results = [];
+                const fetchTasks = []
                 let currDay = DateTime.fromSeconds(rangeStart).startOf('day');
                 const endDay = DateTime.fromSeconds(rangeEnd).endOf('day');
 
                 while (currDay <= endDay) {
                     const date = toISODate(currDay);
-                    if (cachedMap.has(date)) {
-                        results.push(cachedMap.get(date));
-                    } else {
-                        const record = await this.request({ date, lat, lon });
-                        results.push(record);
-                    }
+
+                    if (cachedMap.has(date)) results.push(cachedMap.get(date));
+                    else fetchTasks.push(() => this.request({ date, lat, lon }));
+
                     currDay = currDay.plus({ days: 1 });
                 }
 
-                return results;
+                const fetched = await this._runConcurrent(fetchTasks);
+
+                const allResults = [...results, ...fetched];
+                allResults.sort((a, b) => a.date.localeCompare(b.date));
+
+                return allResults;
             },
 
         }
