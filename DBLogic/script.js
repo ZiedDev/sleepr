@@ -1,4 +1,5 @@
 import { openDB } from 'https://cdn.jsdelivr.net/npm/idb@8/+esm';
+import { DateTime, Interval, Duration } from 'https://cdn.jsdelivr.net/npm/luxon@3/+esm';
 
 // -------------------- Constants --------------------
 const DB_NAME = 'sleep-sun-db';
@@ -55,8 +56,23 @@ export function uuid() {
 
 export function toEpochSec(input) {
     if (input == null) return null;
-    if (typeof input === 'number') return Math.floor(input < 1e11 ? input : input / 1000);
-    if (input instanceof Date) return Math.floor(input.getTime() / 1000);
+    if (
+        typeof input === 'number' ||
+        typeof input === 'bigint' ||
+        (typeof input === 'string' && /^-?\d+$/.test(input))
+    ) {
+        const n = Number(input);
+        if (!isFinite(n) || isNaN(n)) return null;
+        return Math.floor(Math.abs(n) < 1e11 ? n : n / 1000);
+    }
+    if (DateTime.isDateTime(input)) {
+        if (!input.isValid) return null;
+        return Math.floor(input.toSeconds());
+    }
+    if (input instanceof Date) {
+        if (isNaN(input.getTime())) return null;
+        return Math.floor(input.getTime() / 1000);
+    }
     const d = new Date(input).getTime();
     if (!isNaN(d)) return Math.floor(d / 1000);
     return null;
@@ -64,12 +80,14 @@ export function toEpochSec(input) {
 
 export function fromEpochSec(epochSec) {
     if (epochSec == null) return null;
-    return new Date(Number(epochSec) * 1000);
+    return DateTime.fromSeconds(epochSec);
 }
 
 export function toISODate(epochSec) {
+    if (DateTime.isDateTime(epochSec) && epochSec.isValid) return epochSec.toISODate();
+    epochSec = toEpochSec(epochSec);
     if (epochSec == null) return null;
-    return fromEpochSec(epochSec).toISOString().slice(0, 10)
+    return DateTime.fromSeconds(epochSec).toISODate();
 }
 
 export function roundLatLon(input) {
@@ -152,30 +170,37 @@ class Logic {
         return {
 
             async create({ start, end, lat = null, lon = null, id = null } = {}) {
-                if (toEpochSec(start) == null || toEpochSec(end) == null) throw new Error('start and end required');
+                [start, end] = [start, end].map(toEpochSec);
+
+                if (start == null || end == null) throw new Error('start and end required');
+
                 const db = await self._getDB();
                 const record = {
                     id: id ?? uuid(),
-                    start: toEpochSec(start),
-                    end: toEpochSec(end),
+                    start,
+                    end,
                     lat: roundLatLon(lat),
                     lon: roundLatLon(lon),
-                    createdAt: toEpochSec(Date.now())
+                    createdAt: toEpochSec(DateTime.now())
                 };
                 await db.put(SLEEP_STORE, record);
+
                 self.sessionCount.val += 1;
                 self.lastSessionID.val = record.id;
+
                 return record;
             },
 
             async get(id) {
                 if (!id) throw new Error('id required');
+
                 const db = await self._getDB();
                 return db.get(SLEEP_STORE, id);
             },
 
             async update({ id, start = null, end = null, lat = null, lon = null } = {}) {
                 if (!id) throw new Error('id required');
+
                 const db = await self._getDB();
                 const existing = await db.get(SLEEP_STORE, id);
                 if (!existing) throw new Error('record not found');
@@ -184,14 +209,16 @@ class Logic {
                     end: toEpochSec(end) ?? existing.end,
                     lat: roundLatLon(lat) ?? existing.lat,
                     lon: roundLatLon(lon) ?? existing.lon,
-                    updatedAt: toEpochSec(Date.now())
+                    updatedAt: toEpochSec(DateTime.now())
                 });
                 await db.put(SLEEP_STORE, updated);
+
                 return updated;
             },
 
             async delete(id) {
                 if (!id) throw new Error('id required');
+
                 const db = await self._getDB();
                 const tx = db.transaction(SLEEP_STORE, 'readwrite');
                 const store = tx.objectStore(SLEEP_STORE);
@@ -202,32 +229,37 @@ class Logic {
                 }
                 await store.delete(id);
                 await tx.done;
+
                 self.sessionCount.val -= 1;
                 if (self.lastSessionID.val === id) self.lastSessionID.val = null;
+
                 return true;
             },
 
             start({ lat = null, lon = null } = {}) {
-                self.currentSession.val = { start: Date.now(), lat, lon };
+                self.currentSession.val = { start: DateTime.now(), lat, lon };
             },
 
             async stop({ lat = null, lon = null } = {}) {
                 const session = self.currentSession.val;
                 if (!session) throw new Error('no current session started');
                 Object.assign(session, {
-                    end: Date.now(),
+                    end: DateTime.now(),
                     lat: lat ?? session.lat,
                     lon: lon ?? session.lon
                 });
                 if (session.end < session.start) throw new Error('end cannot be before start');
-                // if (!session.lat || !session.lon) throw new Error('lat and lon required');
+                // if (session.lat == null || session.lon == null) throw new Error('lat and lon required');
                 const record = await this.create(session);
+
                 self.currentSession.val = null;
+
                 return record;
             },
 
             async list({ rangeStart, rangeEnd } = {}) {
-                [rangeStart, rangeEnd] = [toEpochSec(rangeStart), toEpochSec(rangeEnd)];
+                [rangeStart, rangeEnd] = [rangeStart, rangeEnd].map(toEpochSec);
+
                 if (rangeStart == null || rangeEnd == null) throw new Error('rangeStart and rangeEnd required');
                 if (rangeEnd < rangeStart) throw new Error('end cannot be before start');
 
@@ -243,8 +275,8 @@ class Logic {
                     if (session.start <= rangeEnd) sessions.push(session);
                     cursor = await cursor.continue();
                 }
-
                 await tx.done;
+
                 return sessions;
             },
 
@@ -256,13 +288,16 @@ class Logic {
         return {
 
             _makeId({ date, lat, lon } = {}) {
-                if (toEpochSec(date) == null) throw new Error('date required');
+                if (toISODate(date) == null) throw new Error('date required');
                 if (roundLatLon(lat) == null || roundLatLon(lon) == null) throw new Error('lat and lon required');
-                return `${toISODate(toEpochSec(date))}_${roundLatLon(lat)}_${roundLatLon(lon)}`
+
+                return `${toISODate(date)}_${roundLatLon(lat)}_${roundLatLon(lon)}`
             },
 
             async put({ date, lat, lon, sunrise, sunset } = {}) {
-                if (toEpochSec(sunrise) == null || toEpochSec(sunset) == null) throw new Error('sunrise and sunset required');
+                [sunrise, sunset] = [sunrise, sunset].map(toEpochSec);
+                if (sunrise == null || sunset == null) throw new Error('sunrise and sunset required');
+
                 const id = this._makeId({ date, lat, lon });
                 const db = await self._getDB();
                 const d = id.split('_');
@@ -271,11 +306,12 @@ class Logic {
                     date: d[0],
                     lat: d[1],
                     lon: d[2],
-                    sunrise: toEpochSec(sunrise),
-                    sunset: toEpochSec(sunset),
-                    updatedAt: toEpochSec(Date.now())
+                    sunrise,
+                    sunset,
+                    updatedAt: toEpochSec(DateTime.now())
                 };
                 await db.put(SUN_STORE, record);
+
                 return record;
             },
 
@@ -286,13 +322,14 @@ class Logic {
             },
 
             async list({ rangeStart, rangeEnd, lat = null, lon = null } = {}) {
-                [rangeStart, rangeEnd] = [toEpochSec(rangeStart), toEpochSec(rangeEnd)];
-                [lat, lon] = [roundLatLon(lat), roundLatLon(lon)];
+                [rangeStart, rangeEnd] = [rangeStart, rangeEnd].map(toEpochSec);
+                [lat, lon] = [lat, lon].map(roundLatLon);
+
                 if (rangeStart == null || rangeEnd == null) throw new Error('rangeStart and rangeEnd required');
                 if (rangeEnd < rangeStart) throw new Error('end cannot be before start');
 
-                const startDate = toISODate(rangeStart);
-                const endDate = toISODate(rangeEnd);
+                const startDate = toISODate(DateTime.fromSeconds(rangeStart));
+                const endDate = toISODate(DateTime.fromSeconds(rangeEnd));
 
                 const db = await self._getDB();
                 const tx = db.transaction(SUN_STORE, 'readonly');
@@ -314,15 +351,14 @@ class Logic {
                 const cached = await this.get({ date, lat, lon });
                 if (cached) return cached;
 
-                const isoDate = toISODate(toEpochSec(date));
-                const url = `https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lon}&date=${isoDate}&formatted=0`;
+                const url = `https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lon}&date=${toISODate(date)}&formatted=0`;
                 const res = await fetch(url);
                 if (!res.ok) throw new Error(`sunrise-sunset.org error: ${res.status}`);
                 const data = await res.json();
-                if (data.status !== "OK") throw new Error(`API returned ${data.status}`);
+                if (data.status !== 'OK') throw new Error(`API returned ${data.status}`);
 
                 const record = await this.put({
-                    date: isoDate,
+                    date,
                     lat,
                     lon,
                     sunrise: data.results.sunrise,
@@ -335,17 +371,21 @@ class Logic {
                 const cached = await this.list({ rangeStart, rangeEnd, lat, lon });
                 const cachedMap = new Map(cached.map(r => [r.date, r]));
 
-                [rangeStart, rangeEnd] = [toEpochSec(rangeStart), toEpochSec(rangeEnd)];
+                [rangeStart, rangeEnd] = [rangeStart, rangeEnd].map(toEpochSec);
 
                 const results = [];
-                for (let t = Math.floor(rangeStart / DS) * DS; t <= Math.floor(rangeEnd / DS) * DS; t += DS) {
-                    const date = toISODate(t);
+                let currDay = DateTime.fromSeconds(rangeStart).startOf('day');
+                const endDay = DateTime.fromSeconds(rangeEnd).endOf('day');
+
+                while (currDay <= endDay) {
+                    const date = toISODate(currDay);
                     if (cachedMap.has(date)) {
                         results.push(cachedMap.get(date));
                     } else {
                         const record = await this.request({ date, lat, lon });
                         results.push(record);
                     }
+                    currDay = currDay.plus({ days: 1 });
                 }
 
                 return results;
@@ -360,22 +400,28 @@ class Logic {
 
             async getGraph(input, maxHeight = 100) {
                 let records, rangeStart, rangeEnd;
+
                 if (Array.isArray(input)) {
                     records = input;
-                    if (!records || records.length === 0) throw new Error("0 records in input");
+                    if (!records || records.length === 0) throw new Error('0 records in input');
+
                     const recordEnds = records.map(r => r.end);
                     [rangeStart, rangeEnd] = [Math.min(...recordEnds), Math.max(...recordEnds)];
                 } else if (input && typeof input === 'object') {
                     ({ rangeStart, rangeEnd } = input);
                     records = await self.sleepSession.list({ rangeStart, rangeEnd });
-                    [rangeStart, rangeEnd] = [toEpochSec(rangeStart), toEpochSec(rangeEnd)];
-                    if (!records || records.length === 0) throw new Error("0 records in input");
+                    if (!records || records.length === 0) throw new Error('0 records in input');
+
+                    [rangeStart, rangeEnd] = [rangeStart, rangeEnd].map(toEpochSec);
                 } else throw new Error('input must be be either array of records or object');
 
                 const recordsMap = {};
-                for (let t = Math.floor(rangeStart / DS) * DS; t <= Math.floor(rangeEnd / DS) * DS; t += DS) {
-                    const date = toISODate(t);
-                    recordsMap[date] = 0;
+                let currDay = DateTime.fromSeconds(rangeStart).startOf('day');
+                const endDay = DateTime.fromSeconds(rangeEnd).endOf('day');
+
+                while (currDay <= endDay) {
+                    recordsMap[toISODate(currDay)] = 0;
+                    currDay = currDay.plus({ days: 1 });
                 }
 
                 records.forEach(record => {
@@ -388,7 +434,7 @@ class Logic {
                 for (const [key, durationSeconds] of Object.entries(recordsMap)) {
                     results[key] = {
                         durationSeconds: durationSeconds,
-                        durationTime: `${Math.floor(durationSeconds / 3600 % 60)}:${Math.floor(durationSeconds / 60 % 60)}:${Math.floor(durationSeconds % 60)}`,
+                        durationTime: Duration.fromMillis(durationSeconds * 1000).toFormat('hh:mm:ss'),
                         height: rangeLerp({
                             inputValue: durationSeconds,
                             inputRangeStart: 0,
@@ -405,11 +451,9 @@ class Logic {
             },
 
             _timeMean(epochSecs) {
-                const secsOfDay = epochSecs.map(d => {
-                    const date = fromEpochSec(d);
-                    const startOfDay = fromEpochSec(d);
-                    startOfDay.setHours(0, 0, 0, 0);
-                    return Math.floor((date.getTime() - startOfDay.getTime()) / 1000);
+                const secsOfDay = epochSecs.map(s => {
+                    const d = DateTime.fromSeconds(s);
+                    return d.diff(d.startOf('day')).as('seconds');
                 });
 
                 const n = secsOfDay.length;
@@ -425,7 +469,7 @@ class Logic {
                 let meanAngle = Math.atan2(S, C);
                 if (meanAngle < 0) meanAngle += 2 * Math.PI;
                 const meanSeconds = (meanAngle / (2 * Math.PI)) * DS;
-                const meanTime = new Date(new Date().setHours(0, 0, 0, 0) + meanSeconds * 1000).toTimeString().slice(0, 8);
+                const meanTime = DateTime.now().startOf('day').plus({ seconds: meanSeconds }).toFormat('HH:mm:ss');
 
                 return {
                     concentration: R,
@@ -441,7 +485,7 @@ class Logic {
                     const { rangeStart, rangeEnd } = input;
                     records = await self.sleepSession.list({ rangeStart, rangeEnd });
                 } else throw new Error('input must be either array of records or object');
-                if (!records || records.length === 0) throw new Error("0 records in input");
+                if (!records || records.length === 0) throw new Error('0 records in input');
 
                 const startMean = this._timeMean(
                     records.map(record => { return record.start; })
@@ -454,7 +498,7 @@ class Logic {
                 }, 0) / records.length;
                 const durationMean = {
                     meanSeconds: durationMeanSeconds,
-                    meanTime: `${Math.floor(durationMeanSeconds / 3600 % 60)}:${Math.floor(durationMeanSeconds / 60 % 60)}:${Math.floor(durationMeanSeconds % 60)}`
+                    meanTime: Duration.fromMillis(durationMeanSeconds * 1000).toFormat('hh:mm:ss')
                 }
 
                 return {
@@ -470,20 +514,24 @@ class Logic {
 
             async getAllSessions(input, dayStart = 0) {
                 let records, rangeStart, rangeEnd;
+
                 if (Array.isArray(input)) {
                     records = input;
-                    if (!records || records.length === 0) throw new Error("0 records in input");
+                    if (!records || records.length === 0) throw new Error('0 records in input');
+
                     const recordEnds = records.map(r => r.end);
                     [rangeStart, rangeEnd] = [Math.min(...recordEnds), Math.max(...recordEnds)];
                 } else if (input && typeof input === 'object') {
                     ({ rangeStart, rangeEnd } = input);
                     records = await self.sleepSession.list({ rangeStart, rangeEnd });
-                    if (!records || records.length === 0) throw new Error("0 records in input");
-                    [rangeStart, rangeEnd] = [toEpochSec(rangeStart), toEpochSec(rangeEnd)];
-                    records.forEach(r => {
-                        r.start = Math.max(rangeStart, Math.min(rangeEnd, r.start));
-                        r.end = Math.max(rangeStart, Math.min(rangeEnd, r.end));
-                    });
+                    if (!records || records.length === 0) throw new Error('0 records in input');
+
+                    [rangeStart, rangeEnd] = [rangeStart, rangeEnd].map(toEpochSec);
+                    records = records.map(r => ({
+                        ...r,
+                        start: Math.max(rangeStart, Math.min(rangeEnd, r.start)),
+                        end: Math.max(rangeStart, Math.min(rangeEnd, r.end))
+                    }));
                 } else throw new Error('input must be be either array of records or object');
 
 
