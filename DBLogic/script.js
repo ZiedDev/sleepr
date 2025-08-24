@@ -37,11 +37,18 @@ export function rangeLerp({
     outputRangeStart,
     outputRangeEnd,
     capInput = false,
-    decimalPlaces = 1
+    decimalPlaces = null
 } = {}) {
-    let t = inputValue;
-    if (capInput) t = Math.max(Math.min(t, inputRangeEnd), inputRangeStart);
-    let res = outputRangeStart + (outputRangeEnd - outputRangeStart) * ((t - inputRangeStart) / (inputRangeEnd - inputRangeStart));
+    let [t, a, b, c, d] = [
+        Number(inputValue),
+        Number(inputRangeStart),
+        Number(inputRangeEnd),
+        Number(outputRangeStart),
+        Number(outputRangeEnd)
+    ];
+    t = capInput ? Math.max(Math.min(t, b), a) : t;
+    let res = c + (d - c) * ((t - a) / (b - a));
+    if (decimalPlaces == null) return res;
     return Number(res.toFixed(decimalPlaces));
 }
 
