@@ -1,4 +1,4 @@
-.title {
+.statsTitle {
     height: 4rem;
     display: flex;
     align-items: end;
@@ -31,5 +31,54 @@
 
     .sleepSessions {
         grid-column: 2 span;
+    }
+}
+
+.hoursSleptContent {
+    --barCount: 7;
+    padding: 1rem;
+    height: 100%;
+
+    .title {
+        height: 3rem;
+    }
+
+    .barChart {
+        display: grid;
+        grid-template-columns: repeat(var(--barCount), 1fr);
+
+        margin-top: 1rem;
+        height: calc(100% - 1rem - 3rem - 0.5rem - 1rem);
+
+        .barItem {
+            width: 60%;
+            justify-self: center;
+            align-self: end;
+            background-color: #d5d4d4;
+            border-radius: 0.25rem 0.25rem 0 0;
+        }
+    }
+
+    .xAxis {
+        display: grid;
+        grid-template-columns: repeat(var(--barCount), 1fr);
+
+        .axisText {
+            padding-top: 0.5rem;
+            border-top: hsl(0, 0%, 26%) 1.5pt solid;
+            color: hsl(0, 0%, 26%);
+            position: relative;
+            font-weight: 500;
+
+            &::after {
+                position: absolute;
+                content: "";
+                bottom: 100%;
+                left: 0;
+                border-left: hsl(0, 0%, 26%) 1.5pt solid;
+                width: 100%;
+                height: 0.75rem;
+            }
+        }
     }
 }
