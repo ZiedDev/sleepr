@@ -1,5 +1,5 @@
 import { openDB } from 'https://cdn.jsdelivr.net/npm/idb@8/+esm';
-import { DateTime, Interval, Duration } from 'https://cdn.jsdelivr.net/npm/luxon@3/+esm';
+import { DateTime, Duration } from 'https://cdn.jsdelivr.net/npm/luxon@3/+esm';
 
 // -------------------- Constants --------------------
 const DB_NAME = 'sleep-sun-db';
@@ -704,15 +704,49 @@ class Logic {
     }
 
     async exportToObject() {
+        const db = await this._getDB();
+        const tx = db.transaction([SLEEP_STORE, SUN_STORE], 'readonly');
 
+        const sleepSessions = await tx.objectStore(SLEEP_STORE).getAll();
+        const sunTimes = await tx.objectStore(SUN_STORE).getAll();
+
+        return {
+            meta: { exportedAt: DateTime.now().toISO() },
+            sleepSessions,
+            sunTimes
+        }
     }
 
     async exportToURL() {
-
+        const obj = await this.exportToObject();
+        const blob = new Blob([JSON.stringify(obj)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        return { url, revoke: () => URL.revokeObjectURL(url) };
     }
 
-    async importFromObject() {
+    async importFromObject(dataObj, clearExisting = false) {
+        if (!dataObj || typeof dataObj !== 'object' || !Array.isArray(dataObj.sleepSessions) || !Array.isArray(dataObj.sunTimes)) throw new Error('valid data object required');
 
+        const db = await this._getDB();
+        const tx = db.transaction([SLEEP_STORE, SUN_STORE], 'readwrite');
+
+        const sleepStore = tx.objectStore(SLEEP_STORE);
+        const sunStore = tx.objectStore(SUN_STORE);
+        if (clearExisting) {
+            await sleepStore.clear();
+            await sunStore.clear();
+        }
+
+        for (const session of dataObj.sleepSessions) {
+            const existing = await sleepStore.get(session.id);
+            if (!existing) await sleepStore.put(session);
+        }
+        const totalCount = await sleepStore.count();
+        this.sessionCount.val = totalCount || 0;
+
+        for (const sun of dataObj.sunTimes) await sunStore.put(sun);
+
+        await tx.done;
     }
 }
 
