@@ -8,6 +8,6 @@ export default function HomePage() {
       <Header />
       <Clock />
       <SleepButton />
-    </>
+    </> 
   );
 }
