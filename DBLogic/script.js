@@ -6,6 +6,10 @@ const DB_NAME = 'sleep-sun-db';
 const DB_VERSION = 1;
 const SLEEP_STORE = 'sleepSessions';
 const SUN_STORE = 'sunTimes';
+
+const CONCURRENCY_LIMIT = 5;
+const CONCURRENCY_DELAY_MS = 50;
+
 const DS = 86400 // 60*60*24
 
 
@@ -80,8 +84,12 @@ export function toEpochSec(input) {
         if (isNaN(input.getTime())) return null;
         return Math.floor(input.getTime() / 1000);
     }
-    const d = new Date(input).getTime();
-    if (!isNaN(d)) return Math.floor(d / 1000);
+    const iso = DateTime.fromISO(input);
+    if (iso.isValid) return Math.floor(iso.toSeconds());
+    const rfc = DateTime.fromRFC2822(input);
+    if (rfc.isValid) return Math.floor(rfc.toSeconds());
+    const norm = new Date(input).getTime();
+    if (!isNaN(norm)) return Math.floor(norm / 1000);
     return null;
 }
 
@@ -414,7 +422,7 @@ class Logic {
                     currDay = currDay.plus({ days: 1 });
                 }
 
-                const fetched = await this._runConcurrent(fetchTasks);
+                const fetched = await this._runConcurrent(fetchTasks, CONCURRENCY_LIMIT, CONCURRENCY_DELAY_MS);
 
                 const allResults = [...results, ...fetched];
                 allResults.sort((a, b) => a.date.localeCompare(b.date));
@@ -473,7 +481,7 @@ class Logic {
                             outputRangeStart: 0,
                             outputRangeEnd: maxHeight,
                             capInput: false,
-                            decimalPlaces: 2
+                            decimalPlaces: null
                         })
                     }
                 }
@@ -543,9 +551,10 @@ class Logic {
                 return null;
             },
 
-            async getAllSessions(input, dayStart = 0) {
+            async getSplitIntervals(input, { splitDuration = Duration.fromObject({ days: 1 }), offsetDuration = Duration.fromMillis(0) } = {}) {
                 let records, rangeStart, rangeEnd;
 
+                if (offsetDuration > splitDuration) throw new Error('offsetDuration cant be greater than splitDuration');
                 if (Array.isArray(input)) {
                     records = input;
                     if (!records || records.length === 0) throw new Error('0 records in input');
@@ -558,16 +567,30 @@ class Logic {
                     if (!records || records.length === 0) throw new Error('0 records in input');
 
                     [rangeStart, rangeEnd] = [rangeStart, rangeEnd].map(toEpochSec);
-                    records = records.map(r => ({
-                        ...r,
-                        start: Math.max(rangeStart, Math.min(rangeEnd, r.start)),
-                        end: Math.max(rangeStart, Math.min(rangeEnd, r.end))
-                    }));
                 } else throw new Error('input must be be either array of records or object');
 
+                const [rangeStartDate, rangeEndDate] = [rangeStart, rangeEnd].map(DateTime.fromSeconds);
 
+                let lastIntervalEnd = rangeEndDate.startOf('day').plus(offsetDuration);
+                while (lastIntervalEnd < rangeEndDate) lastIntervalEnd = lastIntervalEnd.plus(splitDuration);
 
-                return null;
+                let firstIntervalStart = lastIntervalEnd.minus(splitDuration);
+                while (firstIntervalStart > rangeStartDate) firstIntervalStart = firstIntervalStart.minus(splitDuration);
+
+                const splitIntervals = [];
+                let currStart = firstIntervalStart;
+                while (currStart < lastIntervalEnd) {
+                    const nextCurrStart = currStart.plus(splitDuration);
+                    splitIntervals.push({
+                        intervalStart: toEpochSec(currStart),
+                        intervalEnd: toEpochSec(nextCurrStart),
+                        sleepSessions: [],
+                        sunTimes: []
+                    })
+                    currStart = nextCurrStart;
+                }
+
+                return splitIntervals;
             },
 
         }
