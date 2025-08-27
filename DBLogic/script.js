@@ -549,14 +549,76 @@ class Logic {
                 }
             },
 
-            async getSingleSession(sessionID) {
-                return null;
+            async getIntervalTimeline(input, {
+                lat, lon,
+                startPaddingDuration = Duration.fromObject({ days: 0.5 }),
+                endPaddingDuration = Duration.fromObject({ days: 0.5 }),
+                width = 100
+            } = {}) {
+                let records, rangeStart, rangeEnd;
+
+                if (Array.isArray(input)) {
+                    records = input;
+                    if (!records || records.length === 0) throw new Error('0 records in input');
+
+                    [rangeStart, rangeEnd] = [Math.min(...records.map(r => r.start)), Math.max(...records.map(r => r.end))];
+                } else if (input && typeof input === 'object') {
+                    ({ rangeStart, rangeEnd } = input);
+                    records = await self.sleepSession.list({ rangeStart, rangeEnd });
+                    if (!records || records.length === 0) throw new Error('0 records in input');
+
+                    [rangeStart, rangeEnd] = [rangeStart, rangeEnd].map(toEpochSec);
+                } else throw new Error('input must be be either array of records or object');
+
+                records.forEach(r => r.middle = (r.start + r.end) / 2);
+                records.sort((a, b) => a.middle - b.middle);
+                const v = records.map(r => r.middle);
+
+                if (startPaddingDuration) rangeStart = v[0] - startPaddingDuration.as('seconds');
+                if (endPaddingDuration) rangeEnd = v[v.length - 1] + endPaddingDuration.as('seconds');
+
+                const sunRecords = await self.sunTimes.requestList({ rangeStart, rangeEnd, lat, lon });
+
+                const leftTimeShifts = v.map(x => x - v[0]);
+                const rightTimeShifts = v.map(x => v[v.length - 1] - x);
+
+                const leftWidthShifts = leftTimeShifts.map(x => rangeLerp({
+                    inputValue: x,
+                    inputRangeStart: 0,
+                    inputRangeEnd: rangeEnd - rangeStart,
+                    outputRangeStart: 0,
+                    outputRangeEnd: width,
+                    capInput: false,
+                    decimalPlaces: null
+                }));
+
+                const rightWidthShifts = rightTimeShifts.map(x => rangeLerp({
+                    inputValue: x,
+                    inputRangeStart: 0,
+                    inputRangeEnd: rangeEnd - rangeStart,
+                    outputRangeStart: 0,
+                    outputRangeEnd: width,
+                    capInput: false,
+                    decimalPlaces: null
+                }));
+
+                return {
+                    rangeStart,
+                    rangeEnd,
+                    sleepSessions: records,
+                    sunTimes: sunRecords,
+                    leftTimeShifts,
+                    leftWidthShifts,
+                    rightTimeShifts,
+                    rightWidthShifts
+                };
             },
 
-            async getSplitIntervals(
-                input,
-                { splitDuration = Duration.fromObject({ days: 1 }), offsetDuration = Duration.fromMillis(0), lat, lon } = {}
-            ) {
+            async getSplitIntervals(input, {
+                splitDuration = Duration.fromObject({ days: 1 }),
+                offsetDuration = Duration.fromMillis(0),
+                lat, lon
+            } = {}) {
                 let records, rangeStart, rangeEnd;
 
                 if (offsetDuration > splitDuration) throw new Error('offsetDuration cant be greater than splitDuration');
@@ -606,8 +668,8 @@ class Logic {
                     let firstIndex = Math.floor((start - firstIntervalStart) / splitDuration);
                     let lastIndex = Math.ceil((end - firstIntervalStart) / splitDuration) - 1;
 
-                    firstIndex = Math.max(Math.min(firstIndex, splitIntervals.length), 0);
-                    lastIndex = Math.max(Math.min(lastIndex, splitIntervals.length), 0);
+                    firstIndex = Math.max(Math.min(firstIndex, splitIntervals.length - 1), 0);
+                    lastIndex = Math.max(Math.min(lastIndex, splitIntervals.length - 1), 0);
 
                     for (let i = firstIndex; i <= lastIndex; i++) {
                         splitIntervals[i].sleepSessions.push(session);
