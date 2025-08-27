@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+/DBLogic/*
+!/DBLogic/script.js
+!/DBLogic/howTo.md
