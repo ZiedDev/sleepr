@@ -403,6 +403,8 @@ class Logic {
             },
 
             async requestList({ rangeStart, rangeEnd, lat, lon } = {}) {
+                if (roundLatLon(lat) == null || roundLatLon(lon) == null) throw new Error('lat and lon required');
+
                 const cached = await this.list({ rangeStart, rangeEnd, lat, lon });
                 const cachedMap = new Map(cached.map(r => [r.date, r]));
 
@@ -551,7 +553,10 @@ class Logic {
                 return null;
             },
 
-            async getSplitIntervals(input, { splitDuration = Duration.fromObject({ days: 1 }), offsetDuration = Duration.fromMillis(0) } = {}) {
+            async getSplitIntervals(
+                input,
+                { splitDuration = Duration.fromObject({ days: 1 }), offsetDuration = Duration.fromMillis(0), lat, lon } = {}
+            ) {
                 let records, rangeStart, rangeEnd;
 
                 if (offsetDuration > splitDuration) throw new Error('offsetDuration cant be greater than splitDuration');
@@ -559,8 +564,7 @@ class Logic {
                     records = input;
                     if (!records || records.length === 0) throw new Error('0 records in input');
 
-                    const recordEnds = records.map(r => r.end);
-                    [rangeStart, rangeEnd] = [Math.min(...recordEnds), Math.max(...recordEnds)];
+                    [rangeStart, rangeEnd] = [Math.min(...records.map(r => r.start)), Math.max(...records.map(r => r.end))];
                 } else if (input && typeof input === 'object') {
                     ({ rangeStart, rangeEnd } = input);
                     records = await self.sleepSession.list({ rangeStart, rangeEnd });
@@ -568,6 +572,9 @@ class Logic {
 
                     [rangeStart, rangeEnd] = [rangeStart, rangeEnd].map(toEpochSec);
                 } else throw new Error('input must be be either array of records or object');
+
+                const sunRecords = await self.sunTimes.requestList({ rangeStart, rangeEnd, lat, lon });
+                console.log({ rangeStart, rangeEnd, lat, lon });
 
                 const [rangeStartDate, rangeEndDate] = [rangeStart, rangeEnd].map(DateTime.fromSeconds);
 
@@ -584,11 +591,41 @@ class Logic {
                     splitIntervals.push({
                         intervalStart: toEpochSec(currStart),
                         intervalEnd: toEpochSec(nextCurrStart),
+                        // intervalStart: currStart.toLocaleString(DateTime.DATETIME_SHORT),
+                        // intervalEnd: nextCurrStart.toLocaleString(DateTime.DATETIME_SHORT),
                         sleepSessions: [],
                         sunTimes: []
                     })
                     currStart = nextCurrStart;
                 }
+
+                records.forEach(session => {
+                    const [start, end] = [session.start, session.end].map(DateTime.fromSeconds);
+                    let firstIndex = Math.floor((start - firstIntervalStart) / splitDuration);
+                    let lastIndex = Math.ceil((end - firstIntervalStart) / splitDuration) - 1;
+
+                    firstIndex = Math.max(Math.min(firstIndex, splitIntervals.length), 0);
+                    lastIndex = Math.max(Math.min(lastIndex, splitIntervals.length), 0);
+
+                    for (let i = firstIndex; i <= lastIndex; i++) {
+                        splitIntervals[i].sleepSessions.push(session);
+                    }
+                });
+
+                sunRecords.forEach(session => {
+                    const [start, end] = [session.sunrise, session.sunset].map(DateTime.fromSeconds);
+                    let firstIndex = Math.floor((start - firstIntervalStart) / splitDuration);
+                    let lastIndex = Math.ceil((end - firstIntervalStart) / splitDuration) - 1;
+
+                    firstIndex = Math.max(Math.min(firstIndex, splitIntervals.length), 0);
+                    lastIndex = Math.max(Math.min(lastIndex, splitIntervals.length), 0);
+
+                    for (let i = firstIndex; i <= lastIndex; i++) {
+                        splitIntervals[i].sunTimes.push(session);
+                    }
+                });
+
+                // splitIntervals.forEach(i => i.sleepSessions = i.sleepSessions.map(a => [DateTime.fromSeconds(a.start).toLocaleString(DateTime.DATETIME_SHORT), DateTime.fromSeconds(a.end).toLocaleString(DateTime.DATETIME_SHORT)]))
 
                 return splitIntervals;
             },
