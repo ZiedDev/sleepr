@@ -252,14 +252,14 @@ class Logic {
             },
 
             start({ lat = null, lon = null } = {}) {
-                self.currentSession.val = { start: DateTime.now(), lat, lon };
+                self.currentSession.val = { start: DateTime.now().toISO(), lat, lon };
             },
 
             async stop({ lat = null, lon = null } = {}) {
                 const session = self.currentSession.val;
                 if (!session) throw new Error('no current session started');
                 Object.assign(session, {
-                    end: DateTime.now(),
+                    end: DateTime.now().toISO(),
                     lat: lat ?? session.lat,
                     lon: lon ?? session.lon
                 });
@@ -573,9 +573,6 @@ class Logic {
                     [rangeStart, rangeEnd] = [rangeStart, rangeEnd].map(toEpochSec);
                 } else throw new Error('input must be be either array of records or object');
 
-                const sunRecords = await self.sunTimes.requestList({ rangeStart, rangeEnd, lat, lon });
-                console.log({ rangeStart, rangeEnd, lat, lon });
-
                 const [rangeStartDate, rangeEndDate] = [rangeStart, rangeEnd].map(DateTime.fromSeconds);
 
                 let lastIntervalEnd = rangeEndDate.startOf('day').plus(offsetDuration);
@@ -584,6 +581,13 @@ class Logic {
                 let firstIntervalStart = lastIntervalEnd.minus(splitDuration);
                 while (firstIntervalStart > rangeStartDate) firstIntervalStart = firstIntervalStart.minus(splitDuration);
 
+                const sunRecords = await self.sunTimes.requestList({
+                    rangeStart: firstIntervalStart,
+                    rangeEnd: lastIntervalEnd,
+                    lat,
+                    lon
+                });
+
                 const splitIntervals = [];
                 let currStart = firstIntervalStart;
                 while (currStart < lastIntervalEnd) {
@@ -591,8 +595,6 @@ class Logic {
                     splitIntervals.push({
                         intervalStart: toEpochSec(currStart),
                         intervalEnd: toEpochSec(nextCurrStart),
-                        // intervalStart: currStart.toLocaleString(DateTime.DATETIME_SHORT),
-                        // intervalEnd: nextCurrStart.toLocaleString(DateTime.DATETIME_SHORT),
                         sleepSessions: [],
                         sunTimes: []
                     })
@@ -612,20 +614,26 @@ class Logic {
                     }
                 });
 
-                sunRecords.forEach(session => {
-                    const [start, end] = [session.sunrise, session.sunset].map(DateTime.fromSeconds);
-                    let firstIndex = Math.floor((start - firstIntervalStart) / splitDuration);
-                    let lastIndex = Math.ceil((end - firstIntervalStart) / splitDuration) - 1;
+                const sunRecordsMap = new Map(sunRecords.map(r => [r.date, r]));
+                splitIntervals.forEach(interval => {
+                    let currDay = DateTime.fromSeconds(interval.intervalStart).startOf('day');
+                    const endDay = DateTime.fromSeconds(interval.intervalEnd).endOf('day');
 
-                    firstIndex = Math.max(Math.min(firstIndex, splitIntervals.length), 0);
-                    lastIndex = Math.max(Math.min(lastIndex, splitIntervals.length), 0);
-
-                    for (let i = firstIndex; i <= lastIndex; i++) {
-                        splitIntervals[i].sunTimes.push(session);
+                    while (currDay <= endDay) {
+                        const date = toISODate(currDay);
+                        interval.sunTimes.push(sunRecordsMap.get(date));
+                        currDay = currDay.plus({ days: 1 });
                     }
                 });
 
-                // splitIntervals.forEach(i => i.sleepSessions = i.sleepSessions.map(a => [DateTime.fromSeconds(a.start).toLocaleString(DateTime.DATETIME_SHORT), DateTime.fromSeconds(a.end).toLocaleString(DateTime.DATETIME_SHORT)]))
+                /*splitIntervals.forEach(i => {
+                    i.intervalStart = DateTime.fromSeconds(i.intervalStart).toLocaleString(DateTime.DATETIME_SHORT)
+                    i.intervalEnd = DateTime.fromSeconds(i.intervalEnd).toLocaleString(DateTime.DATETIME_SHORT)
+                })
+                splitIntervals.forEach(i => i.sleepSessions = i.sleepSessions.map(a => [DateTime.fromSeconds(a.start).toLocaleString(DateTime.DATETIME_SHORT), DateTime.fromSeconds(a.end).toLocaleString(DateTime.DATETIME_SHORT)]))
+                splitIntervals.forEach(i => i.sunTimes =
+                    i.sunTimes.map(a => [DateTime.fromSeconds(a.sunrise).toLocaleString(DateTime.DATETIME_SHORT), DateTime.fromSeconds(a.sunset).toLocaleString(DateTime.DATETIME_SHORT)])
+                )*/
 
                 return splitIntervals;
             },
