@@ -43,7 +43,9 @@ export default function HoursSlept() {
             className={styles.barItem}
             style={{ height: `calc(${100 * (item.value / max)}%)` }}
             key={index}
-          ></div>
+          >
+            <p>{item.value != 0 ? item.value : ""}</p>
+          </div>
         ))}
       </div>
       <div className={styles.xAxis}>
