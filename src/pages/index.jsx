@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { createContext, useState } from "react";
 
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -9,12 +9,16 @@ import SettingsPage from "@/components/settings";
 import StatsPage from "@/components/stats";
 import NavBar from "@/components/navbar";
 
+export const SleepContext = createContext();
+
 export default function Home() {
   // will remove this var later
-  const defaultPage = 0;
+  const defaultPage = 1;
 
   const [navMode, setNavMode] = useState(defaultPage);
   const [currentPage, setCurrentPage] = useState(defaultPage);
+  const [sleepState, setSleepState] = useState(false);
+
   const pages = {
     0: <StatsPage />,
     1: <HomePage />,
@@ -54,7 +58,12 @@ export default function Home() {
 
   return (
     <>
-      <div className="page">{pages[currentPage]}</div>
+      <SleepContext.Provider value={{ sleepState, setSleepState }}>
+        <div className={`page ${sleepState ? "vignette" : ""}`}>
+          {pages[currentPage]}
+        </div>
+      </SleepContext.Provider>
+
       <NavBar navMode={navMode} setNavMode={setNavMode} />
     </>
   );

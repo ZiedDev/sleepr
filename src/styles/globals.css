@@ -64,4 +64,20 @@ button {
 .page {
   height: 100dvh;
   padding: 1rem;
+
+  &::after {
+    z-index: 1000;
+    pointer-events: none;
+    content: '';
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    transition: box-shadow 250ms ease;
+  }
+
+  &.vignette::after {
+    box-shadow: 0 0 2000px 100px rgba(0, 0, 0, 0.7) inset;
+  }
 }
