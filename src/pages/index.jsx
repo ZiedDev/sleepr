@@ -9,6 +9,8 @@ import SettingsPage from "@/components/settings";
 import StatsPage from "@/components/stats";
 import NavBar from "@/components/navbar";
 
+import { logic } from "@/DBLogic/script";
+
 export const SleepContext = createContext();
 
 export default function Home() {
@@ -27,6 +29,8 @@ export default function Home() {
 
   useGSAP(
     () => {
+      setSleepState(logic.currentSession.val != null);
+
       gsap.to(`.page`, {
         x: navMode > currentPage ? -15 : navMode < currentPage ? 15 : 0,
         opacity: navMode != currentPage ? 0 : 1,
@@ -34,7 +38,7 @@ export default function Home() {
         duration: 0.25,
 
         onComplete: () => {
-          setCurrentPage(navMode); // the only non animation line
+          setCurrentPage(navMode);
 
           gsap.fromTo(
             `.page`,

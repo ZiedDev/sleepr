@@ -1,5 +1,5 @@
-import { openDB } from 'https://cdn.jsdelivr.net/npm/idb@8/+esm';
-import { DateTime, Duration } from 'https://cdn.jsdelivr.net/npm/luxon@3/+esm';
+import { openDB } from 'idb';
+import { DateTime, Duration } from 'luxon';
 
 // -------------------- Constants --------------------
 const DB_NAME = 'sleep-sun-db';
@@ -750,4 +750,6 @@ class Logic {
     }
 }
 
-export default new Logic();
+const logic = new Logic();
+
+export { logic };
