@@ -1,9 +1,7 @@
 import { DateTime, Duration } from 'luxon';
 import { db, useStorage } from './storage';
 import {
-  SleepSessionRecord, SunTimesRecord, UUID, EpochSec,
-  Coordinate, AveragesResult, GraphResults, IntervalTimeline,
-  Timestamp, ISODate, CurrentSession, ExportData, SplitInterval
+  UUID, Timestamp, EpochSec, ISODate, Coordinate, SleepSessionRecord, SunTimesRecord, CurrentSession, TimeMeanResult, AveragesResult, GraphDataPoint, GraphResults, IntervalTimeline, SplitInterval, ExportData
 } from './types';
 
 // -------------------- Utilities & Consts --------------------
@@ -95,17 +93,24 @@ async function _runConcurrent<T>(tasks: (() => Promise<T>)[], max: number = 3): 
 // -------------------- Logic --------------------
 
 export const SleepLogic = {
-  async create(params: { start: Timestamp, end: Timestamp, lat?: Coordinate | null, lon?: Coordinate | null, id?: UUID }) {
-    const start = toEpochSec(params.start);
-    const end = toEpochSec(params.end);
-    if (start === null || end === null) throw new Error('Start and end timestamps are required');
+  async create({ start, end, lat = null, lon = null, id = null }: {
+    start: Timestamp,
+    end: Timestamp,
+    lat?: Coordinate | null,
+    lon?: Coordinate | null,
+    id?: UUID
+  }): Promise<SleepSessionRecord> {
+    const startEpoch = toEpochSec(start);
+    const endEpoch = toEpochSec(end);
+
+    if (startEpoch === null || endEpoch === null) throw new Error('Start and end are required');
 
     const record: SleepSessionRecord = {
-      id: params.id ?? generateUUID(),
-      start,
-      end,
-      lat: roundLatLon(params.lat),
-      lon: roundLatLon(params.lon),
+      id: id ?? generateUUID(),
+      start: startEpoch,
+      end: endEpoch,
+      lat: toCordinate(lat),
+      lon: toCordinate(lon),
       createdAt: toEpochSec(DateTime.now())!
     };
 
@@ -117,7 +122,18 @@ export const SleepLogic = {
     const store = useStorage.getState();
     store.setLastSessionID(record.id);
     store.setSessionCount(store.sessionCount + 1);
+
     return record;
+  },
+
+  async get(id: UUID): Promise<SleepSessionRecord> {
+    if (!id) throw new Error('id required');
+    const row = await db.getFirstAsync<SleepSessionRecord>(
+      `SELECT * FROM sleepSessions WHERE id = ?`,
+      [id]
+    );
+    if (!row) throw new Error('record not found');
+    return row;
   },
 
   async list(rangeStart: Timestamp, rangeEnd: Timestamp): Promise<SleepSessionRecord[]> {

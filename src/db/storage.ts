@@ -36,6 +36,11 @@ const db = SQLite.openDatabaseSync(DB_NAME);
 export const initDB = async () => {
     await db.execAsync(`
         PRAGMA journal_mode = WAL;
+        PRAGMA synchronous = NORMAL;
+        PRAGMA foreign_keys = ON;
+        
+        PRAGMA user_version;
+
         CREATE TABLE IF NOT EXISTS sleepSessions (
             id TEXT PRIMARY KEY NOT NULL,
             start INTEGER NOT NULL,
@@ -45,6 +50,7 @@ export const initDB = async () => {
             createdAt INTEGER NOT NULL,
             updatedAt INTEGER
         );
+
         CREATE TABLE IF NOT EXISTS sunTimes (
             id TEXT PRIMARY KEY NOT NULL,
             date TEXT NOT NULL,
@@ -54,9 +60,24 @@ export const initDB = async () => {
             sunset INTEGER NOT NULL,
             updatedAt INTEGER
         );
+
         CREATE INDEX IF NOT EXISTS idx_sleep_end ON sleepSessions("end");
         CREATE INDEX IF NOT EXISTS idx_sun_date ON sunTimes(date);
-    `);
+  `);
+};
+
+export const runTransaction = async <T>(
+    action: () => Promise<T>
+): Promise<T> => {
+    await db.execAsync('BEGIN TRANSACTION');
+    try {
+        const result = await action();
+        await db.execAsync('COMMIT');
+        return result;
+    } catch (error) {
+        await db.execAsync('ROLLBACK');
+        throw error;
+    }
 };
 
 export { db };
