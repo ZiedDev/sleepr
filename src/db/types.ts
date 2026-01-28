@@ -1,26 +1,85 @@
+import { DateTime, Duration } from 'luxon';
+
+export type UUID = string;
+export type Timestamp = DateTime | Date | EpochSec | string;
+export type EpochSec = number;   // Unix epoch seconds
+export type IsoDate = string;    // YYYY-MM-DD
+export type Coordinate = number; // 2 decimal precision
+
 export interface SleepSessionRecord {
-    id: string;           // uuid
-    start: number;        // epoch seconds
-    end: number;          // epoch seconds
-    lat: number | null;   // 2 decimal precision
-    lon: number | null;   // 2 decimal precision
-    createdAt?: number;   // epoch seconds
-    updatedAt?: number;   // epoch seconds
+    readonly id: UUID;
+    start: EpochSec;
+    end: EpochSec;
+    lat: Coordinate | null;
+    lon: Coordinate | null;
+    createdAt: EpochSec;
+    updatedAt?: EpochSec;
 }
 
 export interface SunTimesRecord {
-    id: string;           // YYYY-MM-DD_lat_lon
-    date: string;         // YYYY-MM-DD
-    lat: number;          // 2 decimal precision
-    lon: number;          // 2 decimal precision
-    sunrise: number;      // epoch seconds
-    sunset: number;       // epoch seconds
-    updatedAt?: number;   // epoch seconds
+    readonly id: `${IsoDate}_${Coordinate}_${Coordinate}`; // YYYY-MM-DD_lat_lon
+    date: IsoDate;
+    lat: Coordinate;
+    lon: Coordinate;
+    sunrise: EpochSec;
+    sunset: EpochSec;
+    updatedAt?: EpochSec;
 }
 
 export interface CurrentSession {
-    start: string;        // ISO string
-    end?: string;         // ISO string
-    lat?: number;         // 2 decimal precision
-    lon?: number;         // 2 decimal precision
+    start: Timestamp;
+    end?: Timestamp;
+    lat?: Coordinate;
+    lon?: Coordinate;
+}
+
+// -------------------- Statistics --------------------
+
+export interface TimeMeanResult {
+    concentration: number; // R value (0 to 1)
+    meanSeconds: number;
+    meanTime: string;      // HH:mm:ss
+}
+
+export interface AveragesResult {
+    start: TimeMeanResult;
+    end: TimeMeanResult;
+    duration: {
+        meanSeconds: number;
+        meanTime: string;  // HH:mm:ss
+    };
+}
+
+export interface GraphDataPoint {
+    durationSeconds: number;
+    durationTime: string;
+    height: number;
+}
+
+export type GraphResults = Record<IsoDate, GraphDataPoint>;
+
+export interface IntervalTimeline {
+    rangeStart: EpochSec;
+    rangeEnd: EpochSec;
+    sleepSessions: SleepSessionRecord[];
+    sunTimes: SunTimesRecord[];
+    leftTimeShifts: number[];
+    leftWidthShifts: number[];
+    rightTimeShifts: number[];
+    rightWidthShifts: number[];
+}
+
+export interface SplitInterval {
+    intervalStart: EpochSec;
+    intervalEnd: EpochSec;
+    sleepSessions: SleepSessionRecord[];
+    sunTimes: (SunTimesRecord | undefined)[];
+}
+
+export interface ExportData {
+    meta: {
+        exportedAt: string;
+    };
+    sleepSessions: SleepSessionRecord[];
+    sunTimes: SunTimesRecord[];
 }
