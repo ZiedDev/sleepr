@@ -2,9 +2,9 @@ import { DateTime, Duration } from 'luxon';
 
 export type UUID = string;
 export type Timestamp = DateTime | Date | EpochSec | string;
-export type EpochSec = number;   // Unix epoch seconds
-export type IsoDate = string;    // YYYY-MM-DD
-export type Coordinate = number; // 2 decimal precision
+export type EpochSec = number & { __brand: 'EpochSec' };     // Unix epoch seconds
+export type ISODate = string & { __brand: 'ISODate' };       // YYYY-MM-DD
+export type Coordinate = number & { __brand: 'Coordinate' }; // 2 decimal precision
 
 export interface SleepSessionRecord {
     readonly id: UUID;
@@ -17,8 +17,8 @@ export interface SleepSessionRecord {
 }
 
 export interface SunTimesRecord {
-    readonly id: `${IsoDate}_${Coordinate}_${Coordinate}`; // YYYY-MM-DD_lat_lon
-    date: IsoDate;
+    readonly id: `${ISODate}_${Coordinate}_${Coordinate}`; // YYYY-MM-DD_lat_lon
+    date: ISODate;
     lat: Coordinate;
     lon: Coordinate;
     sunrise: EpochSec;
@@ -56,7 +56,7 @@ export interface GraphDataPoint {
     height: number;
 }
 
-export type GraphResults = Record<IsoDate, GraphDataPoint>;
+export type GraphResults = Record<ISODate, GraphDataPoint>;
 
 export interface IntervalTimeline {
     rangeStart: EpochSec;

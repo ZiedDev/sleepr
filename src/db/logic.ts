@@ -1,426 +1,238 @@
 import { DateTime, Duration } from 'luxon';
-import { StoredValue, exec, query, initDB } from './storage';
+import { db, useStorage } from './storage';
 import {
-  SleepSessionRecord,
-  SunTimesRecord,
-  CurrentSession
+  SleepSessionRecord, SunTimesRecord, UUID, EpochSec,
+  Coordinate, AveragesResult, GraphResults, IntervalTimeline,
+  Timestamp, ISODate, CurrentSession, ExportData, SplitInterval
 } from './types';
 
-/* ------------------------------- constants ------------------------------- */
+// -------------------- Utilities & Consts --------------------
 
 const CONCURRENCY_LIMIT = 5;
 const CONCURRENCY_DELAY_MS = 50;
-const DS = 86400;
+const DS = 86400; // 60*60*24
 
-/* ------------------------------- utilities ------------------------------- */
+export const rangeLerp = (
+  v: number,
+  iStart: number, iEnd: number,
+  oStart: number, oEnd: number,
+  clamp = false,
+  dec?: number
+): number => {
+  let t = (v - iStart) / (iEnd - iStart);
+  if (clamp) t = Math.max(0, Math.min(1, t));
+  const res = oStart + t * (oEnd - oStart);
+  return dec !== undefined ? Number(res.toFixed(dec)) : res;
+};
 
-function uuid(): string {
+export const generateUUID = (): UUID => {
   return global.crypto?.randomUUID?.() ??
     'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
       const r = (Math.random() * 16) | 0;
       const v = c === 'x' ? r : (r & 0x3) | 0x8;
       return v.toString(16);
     });
-}
+};
 
-function toEpochSec(input: any): number | null {
+export const toEpochSec = (input: Timestamp | null | undefined): EpochSec | null => {
   if (input == null) return null;
-
-  if (typeof input === 'number') {
-    return Math.floor(Math.abs(input) < 1e11 ? input : input / 1000);
+  if (
+    typeof input === 'number' ||
+    (typeof input === 'string' && /^-?\d+$/.test(input))
+  ) {
+    const n = Number(input);
+    if (!Number.isFinite(n)) return null;
+    return Math.floor(Math.abs(n) < 1e11 ? n : n / 1000) as EpochSec;
   }
-
-  if (DateTime.isDateTime(input) && input.isValid) {
-    return Math.floor(input.toSeconds());
+  if (DateTime.isDateTime(input)) {
+    if (!input.isValid) return null;
+    return Math.floor(input.toSeconds()) as EpochSec;
   }
-
   if (input instanceof Date) {
-    return Math.floor(input.getTime() / 1000);
+    if (isNaN(input.getTime())) return null;
+    return Math.floor(input.getTime() / 1000) as EpochSec;
   }
-
-  const iso = DateTime.fromISO(input);
-  if (iso.isValid) return Math.floor(iso.toSeconds());
-
+  if (typeof input === 'string') {
+    const iso = DateTime.fromISO(input);
+    if (iso.isValid) return Math.floor(iso.toSeconds()) as EpochSec;
+    const rfc = DateTime.fromRFC2822(input);
+    if (rfc.isValid) return Math.floor(rfc.toSeconds()) as EpochSec;
+    const norm = new Date(input).getTime();
+    if (!isNaN(norm)) return Math.floor(norm / 1000) as EpochSec;
+  }
   return null;
 }
 
-function toISODate(input: any): string | null {
-  const sec = toEpochSec(input);
-  if (sec == null) return null;
-  return DateTime.fromSeconds(sec).toISODate();
+export const fromEpochSec = (input: EpochSec): DateTime => {
+  return DateTime.fromSeconds(input);
 }
 
-function roundLatLon(v: any): number | null {
-  if (v == null || isNaN(v)) return null;
-  return Number(Number(v).toFixed(2));
+export const toISODate = (input: Timestamp | null | undefined): ISODate | null => {
+  if (DateTime.isDateTime(input) && input.isValid) return input.toISODate() as ISODate;
+  const epoch = toEpochSec(input);
+  return epoch ? DateTime.fromSeconds(epoch).toISODate() as ISODate : null;
 }
 
-/* -------------------------------- Logic -------------------------------- */
+const toCordinate = (input: number | null | undefined): Coordinate | null => {
+  if (input == null || isNaN(input)) return null;
+  return Number(Number(input).toFixed(2)) as Coordinate;
+};
 
-class Logic {
-  lastSessionID = new StoredValue<string | null>('lastSessionID', null);
-  sessionCount = new StoredValue<number>('sessionCount', 0);
-  currentSession = new StoredValue<CurrentSession | null>('currentSession', null);
 
-  constructor() {
-    initDB();
+async function _runConcurrent<T>(tasks: (() => Promise<T>)[], max: number = 3): Promise<T[]> {
+  const results: T[] = [];
+  const executing = new Set<Promise<void>>();
+  for (const task of tasks) {
+    const p = task().then(res => { results.push(res); });
+    executing.add(p);
+    p.then(() => executing.delete(p));
+    if (executing.size >= max) await Promise.race(executing);
   }
+  await Promise.all(executing);
+  return results;
+}
 
-  /* ============================= sleepSession ============================= */
+// -------------------- Logic --------------------
 
-  sleepSession = {
-    create: async ({
+export const SleepLogic = {
+  async create(params: { start: Timestamp, end: Timestamp, lat?: Coordinate | null, lon?: Coordinate | null, id?: UUID }) {
+    const start = toEpochSec(params.start);
+    const end = toEpochSec(params.end);
+    if (start === null || end === null) throw new Error('Start and end timestamps are required');
+
+    const record: SleepSessionRecord = {
+      id: params.id ?? generateUUID(),
       start,
       end,
-      lat = null,
-      lon = null,
-      id = null
-    }: any): Promise<SleepSessionRecord> => {
-      start = toEpochSec(start);
-      end = toEpochSec(end);
-      if (start == null || end == null) throw new Error('start and end required');
+      lat: roundLatLon(params.lat),
+      lon: roundLatLon(params.lon),
+      createdAt: toEpochSec(DateTime.now())!
+    };
 
-      const record: SleepSessionRecord = {
-        id: id ?? uuid(),
-        start,
-        end,
-        lat: roundLatLon(lat),
-        lon: roundLatLon(lon),
-        createdAt: toEpochSec(DateTime.now())!
-      };
+    await db.runAsync(
+      `INSERT INTO sleepSessions (id, start, "end", lat, lon, createdAt) VALUES (?, ?, ?, ?, ?, ?)`,
+      [record.id, record.start, record.end, record.lat, record.lon, record.createdAt]
+    );
 
-      await exec(
-        `INSERT INTO sleepSessions (id,start,end,lat,lon,createdAt)
-         VALUES (?,?,?,?,?,?)`,
-        Object.values(record)
-      );
+    const store = useStorage.getState();
+    store.setLastSessionID(record.id);
+    store.setSessionCount(store.sessionCount + 1);
+    return record;
+  },
 
-      this.sessionCount.val = (this.sessionCount.val ?? 0) + 1;
-      this.lastSessionID.val = record.id;
+  async list(rangeStart: Timestamp, rangeEnd: Timestamp): Promise<SleepSessionRecord[]> {
+    const s = toEpochSec(rangeStart);
+    const e = toEpochSec(rangeEnd);
+    return await db.getAllAsync<SleepSessionRecord>(
+      `SELECT * FROM sleepSessions WHERE "end" >= ? AND start <= ? ORDER BY "end" ASC`,
+      [s!, e!]
+    );
+  },
 
-      return record;
-    },
+  startTracking(lat?: Coordinate, lon?: Coordinate) {
+    useStorage.getState().setCurrentSession({
+      start: DateTime.now().toISO()!,
+      lat: roundLatLon(lat) ?? undefined,
+      lon: roundLatLon(lon) ?? undefined
+    });
+  },
 
-    get: async (id: string) => {
-      if (!id) throw new Error('id required');
-      const rows = await query<SleepSessionRecord>(
-        `SELECT * FROM sleepSessions WHERE id = ?`,
-        [id]
-      );
-      return rows[0];
-    },
+  async stopTracking(lat?: Coordinate, lon?: Coordinate) {
+    const current = useStorage.getState().currentSession;
+    if (!current) throw new Error('No active session to stop');
 
-    update: async ({
-      id,
-      start = null,
-      end = null,
-      lat = null,
-      lon = null
-    }: any): Promise<SleepSessionRecord> => {
-      if (!id) throw new Error('id required');
+    const record = await this.create({
+      ...current,
+      end: DateTime.now().toISO()!,
+      lat: lat ?? current.lat,
+      lon: lon ?? current.lon
+    });
 
-      const rows = await query<SleepSessionRecord>(
-        `SELECT * FROM sleepSessions WHERE id = ?`,
-        [id]
-      );
-      const existing = rows[0];
-      if (!existing) throw new Error('record not found');
+    useStorage.getState().setCurrentSession(null);
+    return record;
+  }
+};
 
-      const updated: SleepSessionRecord = {
-        ...existing,
-        start: toEpochSec(start) ?? existing.start,
-        end: toEpochSec(end) ?? existing.end,
-        lat: roundLatLon(lat) ?? existing.lat,
-        lon: roundLatLon(lon) ?? existing.lon,
-        updatedAt: toEpochSec(DateTime.now())!
-      };
+export const SunLogic = {
+  async request(date: IsoDate, lat: Coordinate, lon: Coordinate): Promise<SunTimesRecord> {
+    const id = `${date}_${lat}_${lon}`;
+    const cached = await db.getFirstAsync<SunTimesRecord>(`SELECT * FROM sunTimes WHERE id = ?`, [id]);
+    if (cached) return cached;
 
-      await exec(
-        `UPDATE sleepSessions
-         SET start=?, end=?, lat=?, lon=?, updatedAt=?
-         WHERE id=?`,
-        [
-          updated.start,
-          updated.end,
-          updated.lat,
-          updated.lon,
-          updated.updatedAt,
-          id
-        ]
-      );
+    const url = `https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lon}&date=${date}&formatted=0`;
+    const res = await fetch(url);
+    const data = await res.json();
 
-      return updated;
-    },
-
-    delete: async (id: string) => {
-      if (!id) throw new Error('id required');
-
-      await exec(`DELETE FROM sleepSessions WHERE id = ?`, [id]);
-
-      this.sessionCount.val = Math.max((this.sessionCount.val ?? 1) - 1, 0);
-      if (this.lastSessionID.val === id) this.lastSessionID.val = null;
-
-      return true;
-    },
-
-    start: ({ lat = null, lon = null }: any = {}) => {
-      this.currentSession.val = {
-        start: DateTime.now().toISO(),
-        lat,
-        lon
-      };
-    },
-
-    stop: async ({ lat = null, lon = null }: any = {}) => {
-      const session = this.currentSession.val;
-      if (!session) throw new Error('no current session started');
-
-      session.end = DateTime.now().toISO();
-      session.lat = lat ?? session.lat;
-      session.lon = lon ?? session.lon;
-
-      if (session.end < session.start) {
-        throw new Error('end cannot be before start');
-      }
-
-      const record = await this.sleepSession.create(session);
-      this.currentSession.val = null;
-
-      return record;
-    },
-
-    list: async ({ rangeStart, rangeEnd }: any) => {
-      rangeStart = toEpochSec(rangeStart);
-      rangeEnd = toEpochSec(rangeEnd);
-
-      if (rangeStart == null || rangeEnd == null) {
-        throw new Error('rangeStart and rangeEnd required');
-      }
-      if (rangeEnd < rangeStart) {
-        throw new Error('end cannot be before start');
-      }
-
-      return query<SleepSessionRecord>(
-        `SELECT * FROM sleepSessions
-         WHERE end >= ? AND start <= ?
-         ORDER BY end ASC`,
-        [rangeStart, rangeEnd]
-      );
-    }
-  };
-
-  /* =============================== sunTimes =============================== */
-
-  sunTimes = {
-    _makeId: ({ date, lat, lon }: any) => {
-      if (!toISODate(date)) throw new Error('date required');
-      if (roundLatLon(lat) == null || roundLatLon(lon) == null) {
-        throw new Error('lat and lon required');
-      }
-      return `${toISODate(date)}_${roundLatLon(lat)}_${roundLatLon(lon)}`;
-    },
-
-    put: async ({
+    const record: SunTimesRecord = {
+      id: id as any,
       date,
       lat,
       lon,
-      sunrise,
-      sunset
-    }: any): Promise<SunTimesRecord> => {
-      sunrise = toEpochSec(sunrise);
-      sunset = toEpochSec(sunset);
-      if (sunrise == null || sunset == null) {
-        throw new Error('sunrise and sunset required');
-      }
+      sunrise: toEpochSec(data.results.sunrise)!,
+      sunset: toEpochSec(data.results.sunset)!,
+      updatedAt: toEpochSec(DateTime.now())!
+    };
 
-      const id = this.sunTimes._makeId({ date, lat, lon });
-      const record: SunTimesRecord = {
-        id,
-        date: id.split('_')[0],
-        lat: roundLatLon(lat)!,
-        lon: roundLatLon(lon)!,
-        sunrise,
-        sunset,
-        updatedAt: toEpochSec(DateTime.now())!
-      };
+    await db.runAsync(
+      `INSERT OR REPLACE INTO sunTimes (id, date, lat, lon, sunrise, sunset, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [record.id, record.date, record.lat, record.lon, record.sunrise, record.sunset, record.updatedAt]
+    );
+    return record;
+  },
 
-      await exec(
-        `INSERT OR REPLACE INTO sunTimes
-         (id,date,lat,lon,sunrise,sunset,updatedAt)
-         VALUES (?,?,?,?,?,?,?)`,
-        Object.values(record)
-      );
+  async requestRange(rangeStart: Timestamp, rangeEnd: Timestamp, lat: Coordinate, lon: Coordinate): Promise<SunTimesRecord[]> {
+    const start = DateTime.fromSeconds(toEpochSec(rangeStart)!).startOf('day');
+    const end = DateTime.fromSeconds(toEpochSec(rangeEnd)!).startOf('day');
 
-      return record;
-    },
-
-    get: async ({ date, lat, lon }: any) => {
-      const id = this.sunTimes._makeId({ date, lat, lon });
-      const rows = await query<SunTimesRecord>(
-        `SELECT * FROM sunTimes WHERE id = ?`,
-        [id]
-      );
-      return rows[0];
-    },
-
-    list: async ({
-      rangeStart,
-      rangeEnd,
-      lat = null,
-      lon = null
-    }: any) => {
-      rangeStart = toEpochSec(rangeStart);
-      rangeEnd = toEpochSec(rangeEnd);
-      lat = roundLatLon(lat);
-      lon = roundLatLon(lon);
-
-      if (rangeStart == null || rangeEnd == null) {
-        throw new Error('rangeStart and rangeEnd required');
-      }
-
-      const startDate = toISODate(rangeStart)!;
-      const endDate = toISODate(rangeEnd)!;
-
-      const rows = await query<SunTimesRecord>(
-        `SELECT * FROM sunTimes
-         WHERE date BETWEEN ? AND ?`,
-        [startDate, endDate]
-      );
-
-      return rows.filter(r =>
-        (lat == null || r.lat === lat) &&
-        (lon == null || r.lon === lon)
-      );
-    },
-
-    request: async ({ date, lat, lon }: any) => {
-      const cached = await this.sunTimes.get({ date, lat, lon });
-      if (cached) return cached;
-
-      const url =
-        `https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lon}` +
-        `&date=${toISODate(date)}&formatted=0`;
-
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`sunrise-sunset error ${res.status}`);
-      const data = await res.json();
-      if (data.status !== 'OK') throw new Error(data.status);
-
-      return this.sunTimes.put({
-        date,
-        lat,
-        lon,
-        sunrise: data.results.sunrise,
-        sunset: data.results.sunset
-      });
-    },
-
-    _runConcurrent: async (
-      tasks: (() => Promise<any>)[],
-      limit = CONCURRENCY_LIMIT,
-      delay = CONCURRENCY_DELAY_MS
-    ) => {
-      const results: Promise<any>[] = [];
-      const executing = new Set<Promise<any>>();
-
-      for (const task of tasks) {
-        const p = task().then(r => {
-          executing.delete(p);
-          return r;
-        });
-
-        results.push(p);
-        executing.add(p);
-
-        if (executing.size >= limit) await Promise.race(executing);
-        if (delay > 0) await new Promise(r => setTimeout(r, delay));
-      }
-
-      return Promise.all(results);
-    },
-
-    requestList: async ({ rangeStart, rangeEnd, lat, lon }: any) => {
-      if (roundLatLon(lat) == null || roundLatLon(lon) == null) {
-        throw new Error('lat and lon required');
-      }
-
-      const cached = await this.sunTimes.list({ rangeStart, rangeEnd, lat, lon });
-      const cachedMap = new Map(cached.map(r => [r.date, r]));
-
-      rangeStart = toEpochSec(rangeStart)!;
-      rangeEnd = toEpochSec(rangeEnd)!;
-
-      const tasks: (() => Promise<SunTimesRecord>)[] = [];
-      const results: SunTimesRecord[] = [];
-
-      let currDay = DateTime.fromSeconds(rangeStart).startOf('day');
-      const endDay = DateTime.fromSeconds(rangeEnd).endOf('day');
-
-      while (currDay <= endDay) {
-        const date = toISODate(currDay)!;
-        if (cachedMap.has(date)) {
-          results.push(cachedMap.get(date)!);
-        } else {
-          tasks.push(() => this.sunTimes.request({ date, lat, lon }));
-        }
-        currDay = currDay.plus({ days: 1 });
-      }
-
-      const fetched = await this.sunTimes._runConcurrent(tasks);
-      return [...results, ...fetched].sort((a, b) =>
-        a.date.localeCompare(b.date)
-      );
+    const tasks: (() => Promise<SunTimesRecord>)[] = [];
+    let curr = start;
+    while (curr <= end) {
+      const d = curr.toISODate() as IsoDate;
+      tasks.push(() => this.request(d, lat, lon));
+      curr = curr.plus({ days: 1 });
     }
-  };
+    return _runConcurrent(tasks, 3);
+  }
+};
 
-  /* ============================== statistics ============================== */
+export const StatsLogic = {
+  async getGraph(rangeStart: Timestamp, rangeEnd: Timestamp, maxHeight: number = 100): Promise<GraphResults> {
+    const records = await SleepLogic.list(rangeStart, rangeEnd);
+    const results: GraphResults = {};
 
-  statistics = {
-    async getGraph(input: any, maxHeight = 100) {
-      let records: SleepSessionRecord[];
-      let rangeStart: number;
-      let rangeEnd: number;
+    let curr = DateTime.fromSeconds(toEpochSec(rangeStart)!).startOf('day');
+    const end = DateTime.fromSeconds(toEpochSec(rangeEnd)!).endOf('day');
 
-      if (Array.isArray(input)) {
-        records = input;
-        const ends = records.map(r => r.end);
-        rangeStart = Math.min(...ends);
-        rangeEnd = Math.max(...ends);
-      } else {
-        records = await this.sleepSession.list(input);
-        rangeStart = toEpochSec(input.rangeStart)!;
-        rangeEnd = toEpochSec(input.rangeEnd)!;
-      }
-
-      const map: Record<string, number> = {};
-      let d = DateTime.fromSeconds(rangeStart).startOf('day');
-      const end = DateTime.fromSeconds(rangeEnd).endOf('day');
-
-      while (d <= end) {
-        map[toISODate(d)!] = 0;
-        d = d.plus({ days: 1 });
-      }
-
-      records.forEach(r => {
-        map[toISODate(r.end)!] += r.end - r.start;
-      });
-
-      const max = Math.max(...Object.values(map));
-
-      const out: any = {};
-      for (const [k, v] of Object.entries(map)) {
-        out[k] = {
-          durationSeconds: v,
-          durationTime: Duration.fromMillis(v * 1000).toFormat('hh:mm:ss'),
-          height: max === 0 ? 0 : (v / max) * maxHeight
-        };
-      }
-
-      return out;
+    while (curr <= end) {
+      results[curr.toISODate()!] = { durationSeconds: 0, durationTime: '00:00:00', height: 0 };
+      curr = curr.plus({ days: 1 });
     }
-  };
-}
 
-/* -------------------------------- singleton -------------------------------- */
+    records.forEach(r => {
+      const date = DateTime.fromSeconds(r.end).toISODate();
+      if (date && results[date]) {
+        const dur = r.end - r.start;
+        results[date].durationSeconds += dur;
+        results[date].durationTime = Duration.fromMillis(results[date].durationSeconds * 1000).toFormat('hh:mm:ss');
+      }
+    });
 
-export const logic = new Logic();
+    const maxDur = Math.max(...Object.values(results).map(d => d.durationSeconds), 1);
+    Object.keys(results).forEach(k => {
+      results[k].height = rangeLerp(results[k].durationSeconds, 0, maxDur, 0, maxHeight);
+    });
+
+    return results;
+  },
+
+  async getIntervalTimeline(rangeStart: Timestamp, rangeEnd: Timestamp, lat: Coordinate, lon: Coordinate): Promise<IntervalTimeline> {
+    const sessions = await SleepLogic.list(rangeStart, rangeEnd);
+    const suns = await SunLogic.requestRange(rangeStart, rangeEnd, lat, lon);
+
+    const timeline: IntervalTimeline = {};
+    suns.forEach(sun => {
+      timeline[sun.date] = { sun, sessions: sessions.filter(s => DateTime.fromSeconds(s.end).toISODate() === sun.date) };
+    });
+    return timeline;
+  }
+};
