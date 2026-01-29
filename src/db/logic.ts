@@ -1,5 +1,5 @@
 import { DateTime, Duration } from 'luxon';
-import { db, useStorage } from './storage';
+import { db, useStorage, runTransaction } from './storage';
 import {
   UUID, Timestamp, EpochSec, ISODate, Coordinate, SleepSessionRecord, SunTimesRecord, CurrentSession, TimeMeanResult, AveragesResult, GraphDataPoint, GraphResults, IntervalTimeline, SplitInterval, ExportData
 } from './types';
@@ -71,34 +71,34 @@ export const toISODate = (input: Timestamp | null | undefined): ISODate | null =
   return epoch ? DateTime.fromSeconds(epoch).toISODate() as ISODate : null;
 }
 
-const toCordinate = (input: number | null | undefined): Coordinate | null => {
+const toCoordinate = (input: number | null | undefined): Coordinate | null => {
   if (input == null || isNaN(input)) return null;
   return Number(Number(input).toFixed(2)) as Coordinate;
 };
 
 
-async function _runConcurrent<T>(tasks: (() => Promise<T>)[], max: number = 3): Promise<T[]> {
-  const results: T[] = [];
-  const executing = new Set<Promise<void>>();
-  for (const task of tasks) {
-    const p = task().then(res => { results.push(res); });
-    executing.add(p);
-    p.then(() => executing.delete(p));
-    if (executing.size >= max) await Promise.race(executing);
-  }
-  await Promise.all(executing);
-  return results;
-}
+// async function _runConcurrent<T>(tasks: (() => Promise<T>)[], max: number = 3): Promise<T[]> {
+//   const results: T[] = [];
+//   const executing = new Set<Promise<void>>();
+//   for (const task of tasks) {
+//     const p = task().then(res => { results.push(res); });
+//     executing.add(p);
+//     p.then(() => executing.delete(p));
+//     if (executing.size >= max) await Promise.race(executing);
+//   }
+//   await Promise.all(executing);
+//   return results;
+// }
 
 // -------------------- Logic --------------------
 
 export const SleepLogic = {
-  async create({ start, end, lat = null, lon = null, id = null }: {
+  async create({ id, start, end, lat, lon }: {
+    id?: UUID
     start: Timestamp,
     end: Timestamp,
-    lat?: Coordinate | null,
-    lon?: Coordinate | null,
-    id?: UUID
+    lat: Coordinate | null,
+    lon: Coordinate | null,
   }): Promise<SleepSessionRecord> {
     const startEpoch = toEpochSec(start);
     const endEpoch = toEpochSec(end);
@@ -109,8 +109,8 @@ export const SleepLogic = {
       id: id ?? generateUUID(),
       start: startEpoch,
       end: endEpoch,
-      lat: toCordinate(lat),
-      lon: toCordinate(lon),
+      lat: toCoordinate(lat),
+      lon: toCoordinate(lon),
       createdAt: toEpochSec(DateTime.now())!
     };
 
@@ -134,6 +134,46 @@ export const SleepLogic = {
     );
     if (!row) throw new Error('record not found');
     return row;
+  },
+
+  async update({ id, start, end, lat, lon }: {
+    id: UUID,
+    start?: Timestamp,
+    end?: Timestamp,
+    lat?: Coordinate | null,
+    lon?: Coordinate | null,
+  }): Promise<SleepSessionRecord> {
+    return await runTransaction(async () => {
+      if (!id) throw new Error('id required');
+
+      const existing = await db.getFirstAsync<SleepSessionRecord>(
+        `SELECT * FROM sleepSessions WHERE id = ?`,
+        [id]
+      );
+      if (!existing) throw new Error('record not found');
+
+
+      const updated: SleepSessionRecord = {
+        ...existing,
+        start: toEpochSec(start) ?? existing.start,
+        end: toEpochSec(end) ?? existing.end,
+        lat: (lat === null) ? null :
+          (toCoordinate(lat) ?? existing.lat),
+        lon: (lon === null) ? null :
+          (toCoordinate(lon) ?? existing.lon),
+      };
+
+      updated.updatedAt = toEpochSec(DateTime.now())!;
+
+      await db.runAsync(
+        `UPDATE sleepSessions
+     SET start = ?, "end" = ?, lat = ?, lon = ?, updatedAt = ?
+     WHERE id = ?`,
+        [updated.start, updated.end, updated.lat, updated.lon, updated.updatedAt, id]
+      );
+
+      return updated;
+    });
   },
 
   async list(rangeStart: Timestamp, rangeEnd: Timestamp): Promise<SleepSessionRecord[]> {
