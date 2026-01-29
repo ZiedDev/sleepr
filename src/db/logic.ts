@@ -137,13 +137,12 @@ export const SleepLogic = {
     return record;
   },
 
-  async get(id: UUID): Promise<SleepSessionRecord> {
+  async get(id: UUID): Promise<SleepSessionRecord | null> {
     if (!id) throw new Error('id required');
     const row = await db.getFirstAsync<SleepSessionRecord>(
       `SELECT * FROM sleepSessions WHERE id = ?`,
       [id]
     );
-    if (!row) throw new Error('record not found');
     return row;
   },
 
@@ -306,7 +305,7 @@ export const SunLogic = {
     date: Timestamp,
     lat: number,
     lon: number,
-  }): Promise<SunTimesRecord> {
+  }): Promise<SunTimesRecord | null> {
     const dateISO = toISODate(date);
     const latCoordinate = toCoordinate(lat);
     const lonCoordinate = toCoordinate(lon);
@@ -320,7 +319,6 @@ export const SunLogic = {
       `SELECT * FROM sunTimes WHERE lat = ? AND lon = ? AND date = ?`,
       [latCoordinate, lonCoordinate, dateISO]
     );
-    if (!row) throw new Error('record not found');
     return row;
   },
 
@@ -354,45 +352,85 @@ export const SunLogic = {
     return rows;
   },
 
-  // async request(date: IsoDate, lat: Coordinate, lon: Coordinate): Promise<SunTimesRecord> {
-  //   const id = `${date}_${lat}_${lon}`;
-  //   const cached = await db.getFirstAsync<SunTimesRecord>(`SELECT * FROM sunTimes WHERE id = ?`, [id]);
-  //   if (cached) return cached;
+  async request({ date, lat, lon }: {
+    date: Timestamp,
+    lat: number,
+    lon: number,
+  }): Promise<SunTimesRecord> {
+    const cached = await this.get({ date, lat, lon });
+    if (cached) return cached;
 
-  //   const url = `https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lon}&date=${date}&formatted=0`;
-  //   const res = await fetch(url);
-  //   const data = await res.json();
+    const dateISO = toISODate(date);
+    const latCoordinate = toCoordinate(lat);
+    const lonCoordinate = toCoordinate(lon);
 
-  //   const record: SunTimesRecord = {
-  //     id: id as any,
-  //     date,
-  //     lat,
-  //     lon,
-  //     sunrise: toEpochSec(data.results.sunrise)!,
-  //     sunset: toEpochSec(data.results.sunset)!,
-  //     updatedAt: toEpochSec(DateTime.now())!
-  //   };
+    if (dateISO == null ||
+      latCoordinate == null ||
+      lonCoordinate == null
+    ) throw new Error('date, lat and lon required');
 
-  //   await db.runAsync(
-  //     `INSERT OR REPLACE INTO sunTimes (id, date, lat, lon, sunrise, sunset, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-  //     [record.id, record.date, record.lat, record.lon, record.sunrise, record.sunset, record.updatedAt]
-  //   );
-  //   return record;
-  // },
 
-  // async requestRange(rangeStart: Timestamp, rangeEnd: Timestamp, lat: Coordinate, lon: Coordinate): Promise<SunTimesRecord[]> {
-  //   const start = DateTime.fromSeconds(toEpochSec(rangeStart)!).startOf('day');
-  //   const end = DateTime.fromSeconds(toEpochSec(rangeEnd)!).startOf('day');
+    const url = `https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lon}&date=${dateISO}&formatted=0`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`sunrise-sunset.org error: ${res.status}`);
+    const data = await res.json();
+    if (data.status !== 'OK') throw new Error(`API returned ${data.status}`);
 
-  //   const tasks: (() => Promise<SunTimesRecord>)[] = [];
-  //   let curr = start;
-  //   while (curr <= end) {
-  //     const d = curr.toISODate() as IsoDate;
-  //     tasks.push(() => this.request(d, lat, lon));
-  //     curr = curr.plus({ days: 1 });
-  //   }
-  //   return _runConcurrent(tasks, 3);
-  // }
+    const record = await this.put({
+      date,
+      lat,
+      lon,
+      sunrise: data.results.sunrise,
+      sunset: data.results.sunset
+    })
+
+    return record;
+  },
+
+  async requestList({ dateStart, dateEnd, lat, lon }: {
+    dateStart: Timestamp,
+    dateEnd: Timestamp,
+    lat: number,
+    lon: number,
+  }): Promise<SunTimesRecord[]> {
+    const startEpoch = toEpochSec(dateStart);
+    const endEpoch = toEpochSec(dateEnd);
+
+    if (startEpoch == null || endEpoch == null) {
+      throw new Error('dateStart and dateEnd required');
+    }
+    if (endEpoch < startEpoch) throw new Error('dateEnd cannot be dateStart rangeStart');
+
+    const latCoordinate = toCoordinate(lat);
+    const lonCoordinate = toCoordinate(lon);
+
+    if (latCoordinate == null || lonCoordinate == null) throw new Error('lat and lon required');
+
+    const cached = await this.list({ dateStart, dateEnd, lat, lon });
+    const cachedMap = new Map(cached.map(r => [r.date, r]));
+
+    const results: SunTimesRecord[] = [];
+    const fetchTasks: (() => Promise<SunTimesRecord>)[] = [];
+
+    let currDay = fromEpochSec(startEpoch).startOf('day');
+    const endDay = fromEpochSec(endEpoch).endOf('day');
+
+    while (currDay <= endDay) {
+      const dateISO = toISODate(currDay)!;
+      if (cachedMap.has(dateISO)) {
+        results.push(cachedMap.get(dateISO)!);
+      } else {
+        fetchTasks.push(() => this.request({ date: dateISO, lat, lon }));
+      }
+      currDay = currDay.plus({ days: 1 });
+    }
+
+    const fetched = await runConcurrent(fetchTasks, CONCURRENCY_LIMIT, CONCURRENCY_DELAY_MS);
+    const allResults = [...results, ...fetched];
+    allResults.sort((a, b) => a.date.localeCompare(b.date));
+
+    return allResults;
+  }
 };
 
 // export const StatsLogic = {
