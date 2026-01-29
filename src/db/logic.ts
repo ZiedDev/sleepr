@@ -76,19 +76,29 @@ export const toCoordinate = (input: number | null | undefined): Coordinate | nul
   return Number(Number(input).toFixed(2)) as Coordinate;
 };
 
+export const runConcurrent = async <T>(
+  tasks: (() => Promise<T>)[],
+  limit: number = 5,
+  delay: number = 50
+): Promise<T[]> => {
+  const results: Promise<T>[] = [];
+  const executing = new Set<Promise<T>>();
 
-// async function _runConcurrent<T>(tasks: (() => Promise<T>)[], max: number = 3): Promise<T[]> {
-//   const results: T[] = [];
-//   const executing = new Set<Promise<void>>();
-//   for (const task of tasks) {
-//     const p = task().then(res => { results.push(res); });
-//     executing.add(p);
-//     p.then(() => executing.delete(p));
-//     if (executing.size >= max) await Promise.race(executing);
-//   }
-//   await Promise.all(executing);
-//   return results;
-// }
+  for (const task of tasks) {
+    const p = task().then(res => {
+      executing.delete(p);
+      return res;
+    });
+
+    results.push(p);
+    executing.add(p);
+
+    if (executing.size >= limit) await Promise.race(executing);
+    if (delay > 0) await new Promise(resolve => setTimeout(resolve, delay));
+  }
+
+  return Promise.all(results);
+};
 
 // -------------------- Logic --------------------
 
@@ -97,8 +107,8 @@ export const SleepLogic = {
     id?: UUID
     start: Timestamp,
     end: Timestamp,
-    lat: Coordinate | null,
-    lon: Coordinate | null,
+    lat: number | null,
+    lon: number | null,
   }): Promise<SleepSessionRecord> {
     const startEpoch = toEpochSec(start);
     const endEpoch = toEpochSec(end);
@@ -141,8 +151,8 @@ export const SleepLogic = {
     id: UUID,
     start?: Timestamp,
     end?: Timestamp,
-    lat?: Coordinate | null,
-    lon?: Coordinate | null,
+    lat?: number | null,
+    lon?: number | null,
   }): Promise<SleepSessionRecord> {
     return await runTransaction(async () => {
       if (!id) throw new Error('id required');
@@ -192,8 +202,8 @@ export const SleepLogic = {
   },
 
   startTracking({ lat, lon }: {
-    lat: Coordinate | null,
-    lon: Coordinate | null,
+    lat: number | null,
+    lon: number | null,
   }): void {
     useStorage.getState().setCurrentSession({
       start: DateTime.now().toISO(),
@@ -203,8 +213,8 @@ export const SleepLogic = {
   },
 
   async stopTracking({ lat, lon }: {
-    lat: Coordinate | null,
-    lon: Coordinate | null,
+    lat: number | null,
+    lon: number | null,
   }): Promise<SleepSessionRecord> {
     const current = useStorage.getState().currentSession;
     if (!current) throw new Error('no active session to stop');
@@ -244,6 +254,39 @@ export const SleepLogic = {
 };
 
 // export const SunLogic = {
+
+//   async put({ date, lat, lon, sunrise, sunset }: {
+//     date: ISODate,
+//     lat: Coordinate,
+//     lon: Coordinate,
+//     sunrise: Timestamp,
+//     sunset: Timestamp,
+//   }): Promise<SunTimesRecord> {
+//     const sunriseEpoch = toEpochSec(sunrise);
+//     const sunsetEpoch = toEpochSec(sunset);
+
+//     if (sunriseEpoch == null || sunsetEpoch == null) throw new Error('sunrise and sunset required');
+
+//     const record: SunTimesRecord = {
+//       id: `${date}_${lat}_${lon}`,
+//       date: date,
+//       lat: roundLatLon(lat)!,
+//       lon: roundLatLon(lon)!,
+//       sunrise,
+//       sunset,
+//       updatedAt: toEpochSec(DateTime.now())!
+//     };
+
+//     await exec(
+//       `INSERT OR REPLACE INTO sunTimes
+//          (id,date,lat,lon,sunrise,sunset,updatedAt)
+//          VALUES (?,?,?,?,?,?,?)`,
+//       Object.values(record)
+//     );
+
+//     return record;
+//   },
+
 //   async request(date: IsoDate, lat: Coordinate, lon: Coordinate): Promise<SunTimesRecord> {
 //     const id = `${date}_${lat}_${lon}`;
 //     const cached = await db.getFirstAsync<SunTimesRecord>(`SELECT * FROM sunTimes WHERE id = ?`, [id]);
