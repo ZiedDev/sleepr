@@ -61,7 +61,7 @@ export const initDB = async () => {
             updatedAt INTEGER
         );
 
-        CREATE INDEX IF NOT EXISTS idx_sleep_end ON sleepSessions("end");
+        CREATE INDEX IF NOT EXISTS idx_sleep_end_start ON sleepSessions("end", start);
         CREATE INDEX IF NOT EXISTS idx_sun_date ON sunTimes(date);
   `);
 };
