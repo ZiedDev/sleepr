@@ -433,44 +433,175 @@ export const SunLogic = {
   }
 };
 
-// export const StatsLogic = {
-//   async getGraph(rangeStart: Timestamp, rangeEnd: Timestamp, maxHeight: number = 100): Promise<GraphResults> {
-//     const records = await SleepLogic.list(rangeStart, rangeEnd);
-//     const results: GraphResults = {};
+export const StatsLogic = {
+  _timeMean(epochSecs: EpochSec[]): TimeMeanResult {
+    const secsOfDay = epochSecs.map(s => {
+      const d = fromEpochSec(s);
+      return d.diff(d.startOf('day')).as('seconds');
+    });
 
-//     let curr = DateTime.fromSeconds(toEpochSec(rangeStart)!).startOf('day');
-//     const end = DateTime.fromSeconds(toEpochSec(rangeEnd)!).endOf('day');
+    const n = secsOfDay.length;
+    let C = 0, S = 0;
+    secsOfDay.forEach(s => {
+      const theta = 2 * Math.PI * (s / DS);
+      C += Math.cos(theta);
+      S += Math.sin(theta);
+    });
+    C /= n; S /= n;
 
-//     while (curr <= end) {
-//       results[curr.toISODate()!] = { durationSeconds: 0, durationTime: '00:00:00', height: 0 };
-//       curr = curr.plus({ days: 1 });
-//     }
+    const R = Math.hypot(C, S);
+    let meanAngle = Math.atan2(S, C);
+    if (meanAngle < 0) meanAngle += 2 * Math.PI;
 
-//     records.forEach(r => {
-//       const date = DateTime.fromSeconds(r.end).toISODate();
-//       if (date && results[date]) {
-//         const dur = r.end - r.start;
-//         results[date].durationSeconds += dur;
-//         results[date].durationTime = Duration.fromMillis(results[date].durationSeconds * 1000).toFormat('hh:mm:ss');
-//       }
-//     });
+    const meanSeconds = (meanAngle / (2 * Math.PI)) * DS;
+    const meanTime = DateTime.now().startOf('day').plus({ seconds: meanSeconds }).toFormat('HH:mm:ss');
 
-//     const maxDur = Math.max(...Object.values(results).map(d => d.durationSeconds), 1);
-//     Object.keys(results).forEach(k => {
-//       results[k].height = rangeLerp(results[k].durationSeconds, 0, maxDur, 0, maxHeight);
-//     });
+    return { concentration: R, meanSeconds, meanTime };
+  },
 
-//     return results;
-//   },
+  getAverages(records: SleepSessionRecord[]): AveragesResult {
+    if (records.length === 0) throw new Error('No records provided');
 
-//   async getIntervalTimeline(rangeStart: Timestamp, rangeEnd: Timestamp, lat: Coordinate, lon: Coordinate): Promise<IntervalTimeline> {
-//     const sessions = await SleepLogic.list(rangeStart, rangeEnd);
-//     const suns = await SunLogic.requestRange(rangeStart, rangeEnd, lat, lon);
+    const startMean = this._timeMean(records.map(r => r.start));
+    const endMean = this._timeMean(records.map(r => r.end));
 
-//     const timeline: IntervalTimeline = {};
-//     suns.forEach(sun => {
-//       timeline[sun.date] = { sun, sessions: sessions.filter(s => DateTime.fromSeconds(s.end).toISODate() === sun.date) };
-//     });
-//     return timeline;
-//   }
-// };
+    const totalDuration = records.reduce((acc, r) => acc + (r.end - r.start), 0);
+    const avgSeconds = totalDuration / records.length;
+
+    return {
+      start: startMean,
+      end: endMean,
+      duration: {
+        meanSeconds: avgSeconds,
+        meanTime: Duration.fromMillis(avgSeconds * 1000).toFormat('hh:mm:ss')
+      }
+    };
+  },
+
+  getGraph(records: SleepSessionRecord[], maxHeight = 100): GraphResults {
+    if (records.length === 0) return {};
+
+    const recordEnds = records.map(r => r.end);
+    const rangeStart = Math.min(...records.map(r => r.start));
+    const rangeEnd = Math.max(...recordEnds);
+
+    const recordsMap: Record<string, number> = {};
+    let currDay = fromEpochSec(rangeStart as EpochSec).startOf('day');
+    const endDay = fromEpochSec(rangeEnd as EpochSec).endOf('day');
+
+    while (currDay <= endDay) {
+      const iso = currDay.toISODate()!;
+      recordsMap[iso] = 0;
+      currDay = currDay.plus({ days: 1 });
+    }
+
+    records.forEach(record => {
+      const iso = fromEpochSec(record.end).toISODate()!;
+      if (recordsMap[iso] !== undefined) {
+        recordsMap[iso] += (record.end - record.start);
+      }
+    });
+
+    const maxDuration = Math.max(...Object.values(recordsMap), 1);
+    const results: GraphResults = {};
+
+    for (const [date, durationSeconds] of Object.entries(recordsMap)) {
+      results[date as ISODate] = {
+        durationSeconds,
+        durationTime: Duration.fromMillis(durationSeconds * 1000).toFormat('hh:mm:ss'),
+        height: rangeLerp(durationSeconds, 0, maxDuration, 0, maxHeight)
+      };
+    }
+
+    return results;
+  },
+
+  /**
+   * Builds the data needed for a horizontal "Lifeline" style view.
+   */
+  async getIntervalTimeline(
+    records: SleepSessionRecord[],
+    { lat, lon, width = 100 }: { lat: number, lon: number, width?: number }
+  ): Promise<IntervalTimeline> {
+    if (records.length === 0) throw new Error('No records provided');
+
+    // Sort by middle point for visual continuity
+    const processed = records.map(r => ({ ...r, middle: (r.start + r.end) / 2 }));
+    processed.sort((a, b) => a.middle - b.middle);
+
+    const rangeStart = (processed[0].middle - DS * 0.5) as EpochSec;
+    const rangeEnd = (processed[processed.length - 1].middle + DS * 0.5) as EpochSec;
+
+    const sunRecords = await SunLogic.requestList({ dateStart: rangeStart, dateEnd: rangeEnd, lat, lon });
+
+    const middles = processed.map(r => r.middle);
+    const totalTimeRange = rangeEnd - rangeStart;
+
+    const leftTimeShifts = middles.map(m => m - middles[0]);
+    const rightTimeShifts = middles.map(m => middles[middles.length - 1] - m);
+
+    const leftWidthShifts = leftTimeShifts.map(ts => rangeLerp(ts, 0, totalTimeRange, 0, width));
+    const rightWidthShifts = rightTimeShifts.map(ts => rangeLerp(ts, 0, totalTimeRange, 0, width));
+
+    return {
+      rangeStart,
+      rangeEnd,
+      sleepSessions: processed,
+      sunTimes: sunRecords,
+      leftTimeShifts,
+      leftWidthShifts,
+      rightTimeShifts,
+      rightWidthShifts
+    };
+  },
+
+  /**
+   * Splits data into periodic intervals (e.g. 24h chunks).
+   */
+  async getSplitIntervals(
+    records: SleepSessionRecord[],
+    { splitDays = 1, lat, lon }: { splitDays?: number, lat: number, lon: number }
+  ): Promise<SplitInterval[]> {
+    if (records.length === 0) return [];
+
+    const rangeStart = Math.min(...records.map(r => r.start));
+    const rangeEnd = Math.max(...records.map(r => r.end));
+    const splitSecs = splitDays * DS;
+
+    const firstStart = fromEpochSec(rangeStart as EpochSec).startOf('day');
+    const lastEnd = fromEpochSec(rangeEnd as EpochSec).endOf('day');
+
+    const sunRecords = await SunLogic.requestList({ dateStart: firstStart, dateEnd: lastEnd, lat, lon });
+    const sunMap = new Map(sunRecords.map(s => [s.date, s]));
+
+    const intervals: SplitInterval[] = [];
+    let curr = firstStart;
+
+    while (curr < lastEnd) {
+      const iStart = toEpochSec(curr)!;
+      const iEnd = (iStart + splitSecs) as EpochSec;
+
+      const sessionsInInterval = records.filter(r => r.end >= iStart && r.start <= iEnd);
+
+      // Collect sun records that touch this interval
+      const intervalSun: (SunTimesRecord | undefined)[] = [];
+      let sunCurr = curr.startOf('day');
+      const sunEnd = fromEpochSec(iEnd).endOf('day');
+      while (sunCurr <= sunEnd) {
+        intervalSun.push(sunMap.get(toISODate(sunCurr)! as ISODate));
+        sunCurr = sunCurr.plus({ days: 1 });
+      }
+
+      intervals.push({
+        intervalStart: iStart,
+        intervalEnd: iEnd,
+        sleepSessions: sessionsInInterval,
+        sunTimes: intervalSun
+      });
+
+      curr = curr.plus({ seconds: splitSecs });
+    }
+
+    return intervals;
+  }
+};

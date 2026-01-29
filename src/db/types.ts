@@ -35,24 +35,24 @@ export interface CurrentSession {
 // -------------------- Statistics --------------------
 
 export interface TimeMeanResult {
-    concentration: number; // R value (0 to 1)
-    meanSeconds: number;
-    meanTime: string;      // HH:mm:ss
+    concentration: number;   // R value (0 to 1)
+    meanSeconds: number;     // mean seconds from start of day
+    meanTime: string;        // mean time of day HH:mm:ss
 }
 
 export interface AveragesResult {
-    start: TimeMeanResult;
-    end: TimeMeanResult;
-    duration: {
+    start: TimeMeanResult;   // average sleep start
+    end: TimeMeanResult;     // average sleep end
+    duration: {              // average sleep duration
         meanSeconds: number;
-        meanTime: string;  // HH:mm:ss
+        meanTime: string;    // HH:mm:ss
     };
 }
 
 export interface GraphDataPoint {
-    durationSeconds: number;
-    durationTime: string;
-    height: number;
+    durationSeconds: number; // duration slept on date
+    durationTime: string;    // HH:mm:ss
+    height: number;          // rescaled duration as height
 }
 
 export type GraphResults = Record<ISODate, GraphDataPoint>;
@@ -74,6 +74,8 @@ export interface SplitInterval {
     sleepSessions: SleepSessionRecord[];
     sunTimes: (SunTimesRecord | undefined)[];
 }
+
+// -------------------- Data --------------------
 
 export interface ExportData {
     meta: {
