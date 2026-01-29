@@ -17,7 +17,6 @@ export interface SleepSessionRecord {
 }
 
 export interface SunTimesRecord {
-    readonly id: `${ISODate}_${Coordinate}_${Coordinate}`; // YYYY-MM-DD_lat_lon
     date: ISODate;
     lat: Coordinate;
     lon: Coordinate;

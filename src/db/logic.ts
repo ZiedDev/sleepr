@@ -251,7 +251,9 @@ export const SleepLogic = {
         : `"end" >= ? AND start <= ?`;
 
     return await db.getAllAsync<SleepSessionRecord>(
-      `SELECT * FROM sleepSessions WHERE ${where} ORDER BY "end" ASC`,
+      `SELECT * FROM sleepSessions 
+        WHERE ${where} 
+        ORDER BY "end" ASC`,
       [rangeStartEpoch, rangeEndEpoch]
     );
   },
@@ -282,7 +284,6 @@ export const SunLogic = {
     const nowEpoch: EpochSec = toEpochSec(DateTime.now())!;
 
     const record: SunTimesRecord = {
-      id: `${dateISO}_${latCoordinate}_${lonCoordinate}`,
       date: dateISO,
       lat: latCoordinate,
       lon: lonCoordinate,
@@ -293,26 +294,65 @@ export const SunLogic = {
 
     await db.runAsync(
       `INSERT OR REPLACE INTO sunTimes
-         (id,date,lat,lon,sunrise,sunset,updatedAt)
-         VALUES (?,?,?,?,?,?,?)`,
-      [record.id, record.date, record.lat, record.lon, record.sunrise, record.sunset, record.updatedAt!]
+         (date,lat,lon,sunrise,sunset,updatedAt)
+         VALUES (?,?,?,?,?,?)`,
+      [record.date, record.lat, record.lon, record.sunrise, record.sunset, record.updatedAt!]
     );
 
     return record;
   },
 
-  // async get({ date, lat, lon }: {
-  //   date: Timestamp,
-  //   lat: number,
-  //   lon: number,
-  // }): Promise<SunTimesRecord> {
-  //     const id = this.sunTimes._makeId({ date, lat, lon });
-  //     const rows = await query<SunTimesRecord>(
-  //       `SELECT * FROM sunTimes WHERE id = ?`,
-  //       [id]
-  //     );
-  //     return rows[0];
-  //   },
+  async get({ date, lat, lon }: {
+    date: Timestamp,
+    lat: number,
+    lon: number,
+  }): Promise<SunTimesRecord> {
+    const dateISO = toISODate(date);
+    const latCoordinate = toCoordinate(lat);
+    const lonCoordinate = toCoordinate(lon);
+
+    if (dateISO == null ||
+      latCoordinate == null ||
+      lonCoordinate == null
+    ) throw new Error('date, lat and lon required');
+
+    const row = await db.getFirstAsync<SunTimesRecord>(
+      `SELECT * FROM sunTimes WHERE lat = ? AND lon = ? AND date = ?`,
+      [latCoordinate, lonCoordinate, dateISO]
+    );
+    if (!row) throw new Error('record not found');
+    return row;
+  },
+
+  async list({ dateStart, dateEnd, lat, lon }: {
+    dateStart: Timestamp,
+    dateEnd: Timestamp,
+    lat: number,
+    lon: number,
+  }): Promise<SunTimesRecord[]> {
+    const dateStartISO = toISODate(dateStart);
+    const dateEndISO = toISODate(dateEnd);
+
+    if (dateStartISO == null || dateEndISO == null) {
+      throw new Error('dateStart and dateEnd required');
+    }
+    if (dateEndISO < dateStartISO) throw new Error('dateEnd cannot be dateStart rangeStart');
+
+    const latCoordinate = toCoordinate(lat);
+    const lonCoordinate = toCoordinate(lon);
+
+    if (latCoordinate == null || lonCoordinate == null) throw new Error('lat and lon required');
+
+
+    const rows = await db.getAllAsync<SunTimesRecord>(
+      `SELECT * FROM sunTimes
+        WHERE lat = ? AND lon = ? AND date BETWEEN ? AND ?
+        ORDER BY date ASC`,
+      [latCoordinate, lonCoordinate, dateStartISO, dateEndISO]
+    );
+
+    return rows;
+  },
 
   // async request(date: IsoDate, lat: Coordinate, lon: Coordinate): Promise<SunTimesRecord> {
   //   const id = `${date}_${lat}_${lon}`;

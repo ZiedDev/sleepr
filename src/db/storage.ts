@@ -52,17 +52,16 @@ export const initDB = async () => {
         );
 
         CREATE TABLE IF NOT EXISTS sunTimes (
-            id TEXT PRIMARY KEY NOT NULL,
-            date TEXT NOT NULL,
             lat REAL NOT NULL,
             lon REAL NOT NULL,
+            date TEXT NOT NULL,
             sunrise INTEGER NOT NULL,
             sunset INTEGER NOT NULL,
-            updatedAt INTEGER
+            updatedAt INTEGER,
+            PRIMARY KEY (lat, lon, date)
         );
 
         CREATE INDEX IF NOT EXISTS idx_sleep_end_start ON sleepSessions("end", start);
-        CREATE INDEX IF NOT EXISTS idx_sun_date ON sunTimes(date);
   `);
 };
 
