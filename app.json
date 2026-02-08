@@ -21,7 +21,8 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.sherbo2007.sleepr"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -30,6 +31,10 @@
       "eas": {
         "projectId": "c9336bd6-4749-4a6e-9bcd-5712c4594cf4"
       }
-    }
+    },
+    "plugins": [
+      "expo-font",
+      "expo-router"
+    ]
   }
 }
