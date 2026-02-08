@@ -3,7 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useLocation } from './src/hooks/useLocation';
 import { db } from './src/db/db';
-import { SleepLogic, toISODate } from './src/db/logic';
+import { SleepLogic, toISODate, DataLogic } from './src/db/logic';
 import { useStorage } from './src/db/storage';
 
 export default function App() {
@@ -87,6 +87,18 @@ export default function App() {
           </Text>
         )}
       </View>
+      <TouchableOpacity
+        style={[styles.button, styles.infoButton, { marginTop: 20 }]}
+        onPress={() => DataLogic.importFromFile({ clearExisting: false })}
+      >
+        <Text style={styles.buttonText}>IMPORT</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.button, styles.infoButton, { marginTop: 20 }]}
+        onPress={() => DataLogic.exportToFile()}
+      >
+        <Text style={styles.buttonText}>EXPORT</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -133,10 +145,13 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
   },
   startButton: {
-    backgroundColor: '#00e5ff',
+    backgroundColor: '#19d1e6',
   },
   stopButton: {
-    backgroundColor: '#ff5252',
+    backgroundColor: '#e61919',
+  },
+  infoButton: {
+    backgroundColor: '#e5e619',
   },
   buttonText: {
     color: '#fff',
