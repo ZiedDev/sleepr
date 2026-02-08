@@ -1,6 +1,9 @@
-import * as SQLite from 'expo-sqlite'; // or react-native-sqlite-storage
 import { Database } from './db.interface'
-import { SleepSessionRecord, SunTimesRecord} from './types';
+import { SleepSessionRecord, SunTimesRecord } from './types';
+import * as SQLite from 'expo-sqlite'; // or react-native-sqlite-storage
+import { File, Paths } from 'expo-file-system';
+import * as DocumentPicker from 'expo-document-picker';
+import * as Sharing from 'expo-sharing';
 
 const DB_NAME = 'sleep_sun.db';
 
@@ -137,5 +140,50 @@ export const db: Database = {
       `DELETE FROM sleepSessions; 
       DELETE FROM sunTimes;`
     );
-  }
+  },
+
+  async importJSON(): Promise<object> {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        copyToCacheDirectory: true,
+        type: 'application/json',
+      });
+      if (result.canceled) {
+        throw new Error('User cancelled import');
+      }
+      const { uri } = result.assets[0];
+      const file = new File(uri);
+      return JSON.parse(file.textSync());
+    } catch (error) {
+      console.error("Import Error:", error);
+      throw error;
+    }
+  },
+
+  async exportJSON(
+    data: object,
+    filename: string
+  ): Promise<void> {
+    try {
+      const file = new File(Paths.cache, `${filename}.json`);
+      const jsonString = JSON.stringify(data, null, 2);
+      file.create();
+      file.write(jsonString);
+
+      const isSharingAvailable = await Sharing.isAvailableAsync();
+
+      if (isSharingAvailable) {
+        await Sharing.shareAsync(file.uri, {
+          mimeType: 'application/json',
+          dialogTitle: 'Export JSON Data',
+          UTI: 'public.json',
+        });
+      } else {
+        throw new Error("Sharing is not available on this platform");
+      }
+    } catch (error) {
+      console.error("Export Error:", error);
+      throw error;
+    }
+  },
 }

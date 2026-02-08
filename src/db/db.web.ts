@@ -1,6 +1,6 @@
-import { openDB, IDBPDatabase } from 'idb'
 import { Database } from './db.interface'
 import { SleepSessionRecord, SunTimesRecord } from './types';
+import { openDB, IDBPDatabase } from 'idb'
 
 const DB_NAME = 'sleep-sun-db';
 const SLEEP_STORE = 'sleepSessions';
@@ -84,5 +84,51 @@ export const db: Database = {
     await tx.objectStore(SLEEP_STORE).clear();
     await tx.objectStore(SUN_STORE).clear();
     await tx.done;
-  }
+  },
+  
+  async importJSON(): Promise<object> {
+    return new Promise((resolve, reject) => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'application/json';
+
+      input.onchange = async () => {
+        const file = input.files?.[0];
+        if (!file) {
+          reject(new Error('No file selected'));
+          return;
+        }
+
+        try {
+          const text = await file.text();
+          const json = JSON.parse(text);
+          resolve(json);
+        } catch (err) {
+          reject(err);
+        }
+      };
+
+      input.click();
+    });
+  },
+
+  async exportJSON(
+    data: object,
+    filename: string
+  ): Promise<void> {
+    const blob = new Blob([JSON.stringify(data, null, 4)], {
+      type: 'application/json',
+    });
+
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename.endsWith('.json')
+      ? filename
+      : `${filename}.json`;
+
+    a.click();
+    URL.revokeObjectURL(url);
+  },
 }

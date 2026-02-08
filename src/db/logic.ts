@@ -389,7 +389,7 @@ export const SunLogic = {
     allResults.sort((a, b) => a.date.localeCompare(b.date));
 
     return allResults;
-  }
+  },
 };
 
 export const StatsLogic = {
@@ -562,5 +562,58 @@ export const StatsLogic = {
     }
 
     return intervals;
-  }
+  },
 };
+
+export const DataLogic = {
+  async exportToObject(): Promise<ExportData> {
+    const [sleep, sun] = await Promise.all([
+      db.getAllSleep(),
+      db.getAllSun(),
+    ]);
+
+    return {
+      meta: {
+        exportedAt: new Date().toISOString() as ISODate,
+      },
+      sleepSessions: sleep,
+      sunTimes: sun,
+    };
+  },
+
+  async importFromObject(
+    data: ExportData,
+    options?: {
+      clearExisting?: boolean;
+    }
+  ): Promise<void> {
+    await db.runTransaction(async () => {
+      if (options?.clearExisting) {
+        await db.clearAll();
+      }
+
+      for (const record of data.sleepSessions) {
+        await db.upsertSleep(record);
+      }
+
+      for (const record of data.sunTimes) {
+        await db.upsertSun(record);
+      }
+    });
+  },
+
+  async exportToFile(): Promise<void> {
+    const obj = await this.exportToObject();
+    await db.exportJSON(
+      obj,
+      `sleepr_data_export_${new Date().toISOString()}`
+    );
+  },
+
+  async importFromFile(options?: {
+    clearExisting?: boolean;
+  }): Promise<void> {
+    const obj = await db.importJSON() as ExportData;
+    await this.importFromObject(obj, options);
+  },
+}

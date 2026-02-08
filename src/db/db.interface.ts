@@ -19,4 +19,7 @@ export interface Database {
   // Transactions / Maintenance
   runTransaction<T>(action: () => Promise<T>): Promise<T>;
   clearAll(): Promise<void>;
+
+  importJSON(): Promise<object>;
+  exportJSON(data:object, filename:string): Promise<void>;
 }
