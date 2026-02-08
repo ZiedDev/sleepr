@@ -1,5 +1,6 @@
 import { DateTime, Duration } from 'luxon';
-import { db, useStorage, runTransaction } from './storage';
+import { useStorage } from './storage';
+import { db } from './db';
 import {
   UUID, Timestamp, EpochSec, ISODate, Coordinate, SleepSessionRecord, SunTimesRecord, CurrentSession, TimeMeanResult, AveragesResult, GraphDataPoint, GraphResults, IntervalTimeline, SplitInterval, ExportData
 } from './types';
@@ -125,10 +126,7 @@ export const SleepLogic = {
       createdAt: toEpochSec(DateTime.now())!
     };
 
-    await db.runAsync(
-      `INSERT INTO sleepSessions (id, start, "end", lat, lon, createdAt) VALUES (?, ?, ?, ?, ?, ?)`,
-      [record.id, record.start, record.end, record.lat, record.lon, record.createdAt]
-    );
+    await db.upsertSleep(record);
 
     const store = useStorage.getState();
     store.setLastSessionID(record.id);
@@ -139,11 +137,7 @@ export const SleepLogic = {
 
   async get(id: UUID): Promise<SleepSessionRecord | null> {
     if (!id) throw new Error('id required');
-    const row = await db.getFirstAsync<SleepSessionRecord>(
-      `SELECT * FROM sleepSessions WHERE id = ?`,
-      [id]
-    );
-    return row;
+    return db.getSleep(id);
   },
 
   async update({ id, start, end, lat, lon }: {
@@ -153,13 +147,10 @@ export const SleepLogic = {
     lat?: number | null,
     lon?: number | null,
   }): Promise<SleepSessionRecord> {
-    return await runTransaction(async () => {
+    return await db.runTransaction(async () => {
       if (!id) throw new Error('id required');
 
-      const existing = await db.getFirstAsync<SleepSessionRecord>(
-        `SELECT * FROM sleepSessions WHERE id = ?`,
-        [id]
-      );
+      const existing = await db.getSleep(id);
       if (!existing) throw new Error('record not found');
 
       const nowEpoch: EpochSec = toEpochSec(DateTime.now())!;
@@ -175,13 +166,7 @@ export const SleepLogic = {
         updatedAt: nowEpoch,
       };
 
-
-      await db.runAsync(
-        `UPDATE sleepSessions
-          SET start = ?, "end" = ?, lat = ?, lon = ?, updatedAt = ?
-          WHERE id = ?`,
-        [updated.start, updated.end, updated.lat, updated.lon, updated.updatedAt!, id]
-      );
+      await db.upsertSleep(updated);
 
       return updated;
     });
@@ -190,12 +175,9 @@ export const SleepLogic = {
   async delete(id: UUID): Promise<boolean> {
     if (!id) throw new Error('id required');
 
-    const result = await db.runAsync(
-      `DELETE FROM sleepSessions WHERE id = ?`,
-      [id]
-    );
+    const result = await db.deleteSleep(id);
 
-    if (result.changes <= 0) return false;
+    if (!result) return false;
 
     const store = useStorage.getState();
     store.setSessionCount(Math.max(0, store.sessionCount - 1));
@@ -249,12 +231,7 @@ export const SleepLogic = {
         ? `start >= ? AND "end" <= ?`
         : `"end" >= ? AND start <= ?`;
 
-    return await db.getAllAsync<SleepSessionRecord>(
-      `SELECT * FROM sleepSessions 
-        WHERE ${where} 
-        ORDER BY "end" ASC`,
-      [rangeStartEpoch, rangeEndEpoch]
-    );
+    return await db.listSleep(rangeStartEpoch, rangeEndEpoch, match);
   },
 };
 
@@ -291,12 +268,7 @@ export const SunLogic = {
       updatedAt: nowEpoch,
     };
 
-    await db.runAsync(
-      `INSERT OR REPLACE INTO sunTimes
-         (date,lat,lon,sunrise,sunset,updatedAt)
-         VALUES (?,?,?,?,?,?)`,
-      [record.date, record.lat, record.lon, record.sunrise, record.sunset, record.updatedAt!]
-    );
+    await db.upsertSun(record);
 
     return record;
   },
@@ -315,11 +287,7 @@ export const SunLogic = {
       lonCoordinate == null
     ) throw new Error('date, lat and lon required');
 
-    const row = await db.getFirstAsync<SunTimesRecord>(
-      `SELECT * FROM sunTimes WHERE lat = ? AND lon = ? AND date = ?`,
-      [latCoordinate, lonCoordinate, dateISO]
-    );
-    return row;
+    return db.getSun(dateISO, latCoordinate, lonCoordinate);
   },
 
   async list({ dateStart, dateEnd, lat, lon }: {
@@ -342,14 +310,7 @@ export const SunLogic = {
     if (latCoordinate == null || lonCoordinate == null) throw new Error('lat and lon required');
 
 
-    const rows = await db.getAllAsync<SunTimesRecord>(
-      `SELECT * FROM sunTimes
-        WHERE lat = ? AND lon = ? AND date BETWEEN ? AND ?
-        ORDER BY date ASC`,
-      [latCoordinate, lonCoordinate, dateStartISO, dateEndISO]
-    );
-
-    return rows;
+    return await db.listSun(latCoordinate, lonCoordinate, dateStartISO, dateEndISO);
   },
 
   async request({ date, lat, lon }: {
@@ -376,15 +337,13 @@ export const SunLogic = {
     const data = await res.json();
     if (data.status !== 'OK') throw new Error(`API returned ${data.status}`);
 
-    const record = await this.put({
+    return await this.put({
       date,
       lat,
       lon,
       sunrise: data.results.sunrise,
       sunset: data.results.sunset
-    })
-
-    return record;
+    });
   },
 
   async requestList({ dateStart, dateEnd, lat, lon }: {

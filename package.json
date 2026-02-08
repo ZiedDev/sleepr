@@ -21,6 +21,7 @@
     "expo-sqlite": "^16.0.10",
     "expo-status-bar": "~3.0.9",
     "expo-system-ui": "~6.0.9",
+    "idb": "^8.0.3",
     "luxon": "^3.7.2",
     "react": "19.1.0",
     "react-dom": "19.1.0",
