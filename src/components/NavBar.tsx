@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, Dimensions } from 'react-native';
+import Animated, { useSharedValue } from 'react-native-reanimated';
+import { BlurView } from 'expo-blur';
 import PhMoonBold from '../../assets/svgs/PhMoonBold';
 import PhChartBarBold from '../../assets/svgs/PhChartBarBold';
 import PhGearBold from '../../assets/svgs/PhGearBold';
@@ -15,35 +17,34 @@ export default function NavBar({
 }) {
 
   return (
-    <View style={styles.container}>
+    <BlurView intensity={30} style={styles.container}>
       <TouchableOpacity style={styles.button} onPress={() => setNavState("Statistics")}>
-        <PhChartBarBold fill={"white"}/>
-        <Text style={styles.buttonText}>Statistics</Text>
+        <PhChartBarBold style={navState == "Statistics" ?  styles.iconSelected: ""} fill={navState == "Statistics" ?  "#13b4e6": "white"} />
+        <Text style={[styles.buttonText, navState == "Statistics" ?  styles.textSelected: ""]}>Statistics</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.button} onPress={() => setNavState("Home")}>
-        <PhMoonBold fill={"white"}/>
-        <Text style={styles.buttonText}>Home</Text>
+        <PhMoonBold style={navState == "Home" ?  styles.iconSelected: ""} fill={navState == "Home" ?  "#13b4e6": "white"} />
+        <Text style={[styles.buttonText, navState == "Home" ?  styles.textSelected: ""]}>Home</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.button} onPress={() => setNavState("Settings")}>
-        <PhGearBold fill={"white"}/>
-        <Text style={styles.buttonText}>Settings</Text>
+        <PhGearBold style={navState == "Settings" ?  styles.iconSelected: ""} fill={navState == "Settings" ?  "#13b4e6": "white"} />
+        <Text style={[styles.buttonText, navState == "Settings" ?  styles.textSelected: ""]}>Settings</Text>
       </TouchableOpacity>
-    </View>
+    </BlurView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    overflow: "hidden",
     position: "absolute",
     bottom: 0,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
     marginHorizontal: 10,
-    paddingVertical: 17.5,
-    paddingHorizontal: 20,
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
     backgroundColor: "rgba(0,0,0,0.15)",
     borderCurve: "continuous",
     borderStyle: "solid",
@@ -51,16 +52,31 @@ const styles = StyleSheet.create({
     borderColor: "#434343",
     borderRadius: 30,
     width: Dimensions.get("window").width - 10 * 2,
+    paddingVertical: 17.5,
   },
 
   button: {
     display: "flex",
-    alignItems: "center"
+    alignItems: "center",
+    width: "33.333%"
   },
-  
+
   buttonText: {
     fontWeight: "bold",
     color: "white",
   },
 
+  iconSelected: {
+    shadowColor: "#109dc9", 
+    shadowOffset: { width: 0, height: 0, },
+    shadowOpacity: 1,
+    shadowRadius: 2.5,
+  },
+
+  textSelected: {
+    color: "#13b4e6",
+    textShadowColor: "#109dc9",
+    textShadowRadius: 2.5,
+    textShadowOffset: { width: 0, height: 0 }
+  },
 });
