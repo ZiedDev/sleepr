@@ -17,20 +17,27 @@ export default function NavBar({
 }) {
 
   return (
-    <BlurView intensity={30} style={styles.container}>
+    <BlurView
+      style={styles.container}
+      tint="systemChromeMaterialDark"
+      intensity={42}
+      experimentalBlurMethod='dimezisBlurView'
+      blurReductionFactor={20}
+    >
+
       <TouchableOpacity style={styles.button} onPress={() => setNavState("Statistics")}>
-        <PhChartBarBold style={navState == "Statistics" ?  styles.iconSelected: ""} fill={navState == "Statistics" ?  "#13b4e6": "white"} />
-        <Text style={[styles.buttonText, navState == "Statistics" ?  styles.textSelected: ""]}>Statistics</Text>
+        <PhChartBarBold style={navState == "Statistics" ? styles.iconSelected : ""} fill={navState == "Statistics" ? "#13b4e6" : "white"} />
+        <Text style={[styles.buttonText, navState == "Statistics" ? styles.textSelected : ""]}>Statistics</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.button} onPress={() => setNavState("Home")}>
-        <PhMoonBold style={navState == "Home" ?  styles.iconSelected: ""} fill={navState == "Home" ?  "#13b4e6": "white"} />
-        <Text style={[styles.buttonText, navState == "Home" ?  styles.textSelected: ""]}>Home</Text>
+        <PhMoonBold style={navState == "Home" ? styles.iconSelected : ""} fill={navState == "Home" ? "#13b4e6" : "white"} />
+        <Text style={[styles.buttonText, navState == "Home" ? styles.textSelected : ""]}>Home</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.button} onPress={() => setNavState("Settings")}>
-        <PhGearBold style={navState == "Settings" ?  styles.iconSelected: ""} fill={navState == "Settings" ?  "#13b4e6": "white"} />
-        <Text style={[styles.buttonText, navState == "Settings" ?  styles.textSelected: ""]}>Settings</Text>
+        <PhGearBold style={navState == "Settings" ? styles.iconSelected : ""} fill={navState == "Settings" ? "#13b4e6" : "white"} />
+        <Text style={[styles.buttonText, navState == "Settings" ? styles.textSelected : ""]}>Settings</Text>
       </TouchableOpacity>
     </BlurView>
   );
@@ -45,11 +52,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-around",
     alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.15)",
+    backgroundColor: "rgba(17, 0, 48, 0.15)",
     borderCurve: "continuous",
     borderStyle: "solid",
     borderWidth: 2,
-    borderColor: "#434343",
+    borderColor: "rgba(67, 67, 67, 0.6)",
     borderRadius: 30,
     width: Dimensions.get("window").width - 10 * 2,
     paddingVertical: 17.5,
@@ -67,7 +74,7 @@ const styles = StyleSheet.create({
   },
 
   iconSelected: {
-    shadowColor: "#109dc9", 
+    shadowColor: "#109dc9",
     shadowOffset: { width: 0, height: 0, },
     shadowOpacity: 1,
     shadowRadius: 2.5,
@@ -78,5 +85,16 @@ const styles = StyleSheet.create({
     textShadowColor: "#109dc9",
     textShadowRadius: 2.5,
     textShadowOffset: { width: 0, height: 0 }
+  },
+  absolute: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    bottom: 0,
+    right: 0
+  },
+  temp: {
+    width: "33.333%",
+    backgroundColor: "#fff0000"
   },
 });

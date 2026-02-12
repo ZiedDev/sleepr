@@ -29,6 +29,7 @@ export default function App() {
 const styles = StyleSheet.create({
   margins: {
     height: Dimensions.get("window").height - 99,
+    width: Dimensions.get("window").width,
     marginTop: 65,
     marginBottom: 34,
     position: "relative",
