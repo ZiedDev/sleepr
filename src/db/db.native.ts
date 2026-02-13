@@ -1,7 +1,8 @@
 import { Database } from './db.interface'
 import { SleepSessionRecord, SunTimesRecord } from './types';
+import { Platform } from 'react-native';
 import * as SQLite from 'expo-sqlite'; // or react-native-sqlite-storage
-import { File, Paths } from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as DocumentPicker from 'expo-document-picker';
 import * as Sharing from 'expo-sharing';
 
@@ -152,8 +153,9 @@ export const db: Database = {
         throw new Error('User cancelled import');
       }
       const { uri } = result.assets[0];
-      const file = new File(uri);
-      return JSON.parse(file.textSync());
+
+      const jsonString = await fetch(uri).then(res => res.text());
+      return JSON.parse(jsonString);
     } catch (error) {
       console.error("Import Error:", error);
       throw error;
@@ -165,22 +167,41 @@ export const db: Database = {
     filename: string
   ): Promise<void> {
     try {
-      const file = new File(Paths.cache, `${filename}.json`);
       const jsonString = JSON.stringify(data, null, 2);
-      file.create();
-      file.write(jsonString);
+      const tempUri = FileSystem.cacheDirectory + `${filename}.json`;
 
-      const isSharingAvailable = await Sharing.isAvailableAsync();
+      await FileSystem.writeAsStringAsync(
+        tempUri,
+        jsonString,
+        { encoding: FileSystem.EncodingType.UTF8 }
+      );
 
-      if (isSharingAvailable) {
-        await Sharing.shareAsync(file.uri, {
-          mimeType: 'application/json',
-          dialogTitle: 'Export JSON Data',
-          UTI: 'public.json',
-        });
-      } else {
-        throw new Error("Sharing is not available on this platform");
+      if (Platform.OS === 'android') {
+        const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+
+        if (!permissions.granted) {
+          throw new Error("User cancelled folder picker");
+        } else {
+          const fileUri = await FileSystem.StorageAccessFramework.createFileAsync(
+            permissions.directoryUri,
+            `${filename}.json`,
+            'application/json'
+          );
+
+          await FileSystem.writeAsStringAsync(
+            fileUri,
+            jsonString,
+            { encoding: FileSystem.EncodingType.UTF8 }
+          );
+        }
       }
+
+      await Sharing.shareAsync(tempUri, {
+        mimeType: 'application/json',
+        dialogTitle: 'Export JSON Data',
+        UTI: 'public.json',
+      });
+
     } catch (error) {
       console.error("Export Error:", error);
       throw error;

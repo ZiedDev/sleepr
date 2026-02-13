@@ -5,6 +5,7 @@
   "main": "index.ts",
   "scripts": {
     "start": "npx expo start -c",
+    "clean": "cd android && gradlew.bat clean && cd ..",
     "android": "npx expo run:android",
     "ios": "npx expo run:ios"
   },
