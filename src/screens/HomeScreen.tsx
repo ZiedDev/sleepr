@@ -2,13 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useLocation } from '../hooks/useLocation';
-import { db } from '../db/db';
-import { SleepLogic, toISODate, DataLogic } from '../db/logic';
+import { initDB, SleepLogic, toISODate, DataLogic } from '../db/logic';
 import { useStorage } from '../db/storage';
+import * as Haptics from 'expo-haptics';
 
 export default function HomeScreen() {
   const [dbReady, setDbReady] = useState(false);
-  const { location, errorMsg, loading: locationLoading } = useLocation();
+  const { location, errorMsg, loading: locationLoading, refresh: refreshLocation } = useLocation();
 
   const currentSession = useStorage((state) => state.currentSession);
   const isTracking = !!currentSession;
@@ -16,31 +16,31 @@ export default function HomeScreen() {
   const isLoading = !dbReady || locationLoading;
 
   useEffect(() => {
-    async function setup() {
+    (async () => {
       try {
-        await db.init();
+        await initDB();
         setDbReady(true);
       } catch (e) {
-        console.error("Database init failed", e);
+        console.error("[HomeScreen] Database init failed", e);
       }
-    }
-    setup();
+    })();
   }, []);
 
   const handleToggleTracking = async () => {
+    Haptics.selectionAsync();
     const lat = location?.coords.latitude ?? null;
     const lon = location?.coords.longitude ?? null;
 
     try {
       if (isTracking) {
         await SleepLogic.stopTracking({ lat, lon });
-        console.log("Tracking stopped and saved.");
+        console.log("[HomeScreen] Tracking stopped and saved.");
       } else {
         SleepLogic.startTracking({ lat, lon });
-        console.log("Tracking started.");
+        console.log("[HomeScreen] Tracking started.");
       }
     } catch (error) {
-      console.error("Failed to toggle tracking:", error);
+      console.error("[HomeScreen] Failed to toggle tracking:", error);
     }
   };
 
@@ -88,15 +88,24 @@ export default function HomeScreen() {
           </Text>
         )}
       </View>
+
+      <TouchableOpacity
+        style={[styles.button, styles.startButton, { marginTop: 20 }]}
+        onPress={() => { refreshLocation(); Haptics.selectionAsync(); }}
+      >
+        <Text style={styles.buttonText}>REFRESH</Text>
+      </TouchableOpacity>
+
       <TouchableOpacity
         style={[styles.button, styles.infoButton, { marginTop: 20 }]}
-        onPress={() => DataLogic.importFromFile({ clearExisting: false })}
+        onPress={() => { DataLogic.importFromFile({ clearExisting: false }); Haptics.selectionAsync(); }}
       >
         <Text style={styles.buttonText}>IMPORT</Text>
       </TouchableOpacity>
+
       <TouchableOpacity
         style={[styles.button, styles.infoButton, { marginTop: 20 }]}
-        onPress={() => DataLogic.exportToFile()}
+        onPress={() => { DataLogic.exportToFile(); Haptics.selectionAsync(); }}
       >
         <Text style={styles.buttonText}>EXPORT</Text>
       </TouchableOpacity>
