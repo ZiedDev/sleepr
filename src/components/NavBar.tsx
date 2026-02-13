@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, Dimensions } from 'react-native';
 import Animated, { useSharedValue } from 'react-native-reanimated';
-import { BlurView } from 'expo-blur';
+import SafeBlurView from './SafeBlurView';
 import PhMoonBold from '../../assets/svgs/PhMoonBold';
 import PhChartBarBold from '../../assets/svgs/PhChartBarBold';
 import PhGearBold from '../../assets/svgs/PhGearBold';
@@ -17,7 +17,7 @@ export default function NavBar({
 }) {
 
   return (
-    <BlurView
+    <SafeBlurView
       style={styles.container}
       tint="systemChromeMaterialDark"
       intensity={42}
@@ -39,7 +39,7 @@ export default function NavBar({
         <PhGearBold style={navState == "Settings" ? styles.iconSelected : ""} fill={navState == "Settings" ? "#13b4e6" : "white"} />
         <Text style={[styles.buttonText, navState == "Settings" ? styles.textSelected : ""]}>Settings</Text>
       </TouchableOpacity>
-    </BlurView>
+    </SafeBlurView>
   );
 }
 
