@@ -9,7 +9,7 @@ import {
 
 const CONCURRENCY_LIMIT = 5;
 const CONCURRENCY_DELAY_MS = 50;
-const DS = 86400; // 60*60*24
+const DS = 86400; // 24*60*60 (seconds in a day)
 
 export const rangeLerp = (
   v: number,
@@ -210,6 +210,9 @@ export const SleepLogic = {
       lat: current.lat ?? toCoordinate(lat),
       lon: current.lon ?? toCoordinate(lon),
     });
+
+    // enforce location save
+    if (!lat || !lon) throw new Error('lat and lon required');
 
     useStorage.getState().setCurrentSession(null);
     return record;

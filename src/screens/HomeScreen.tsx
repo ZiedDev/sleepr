@@ -8,7 +8,7 @@ import { useStorage } from '../db/storage';
 
 export default function HomeScreen() {
   const [dbReady, setDbReady] = useState(false);
-  const { location, errorMsg, loading: locationLoading } = useLocation();
+  const { location, errorMsg, loading: locationLoading, refresh: refreshLocation } = useLocation();
 
   const currentSession = useStorage((state) => state.currentSession);
   const isTracking = !!currentSession;
@@ -88,12 +88,21 @@ export default function HomeScreen() {
           </Text>
         )}
       </View>
+
+      <TouchableOpacity
+        style={[styles.button, styles.startButton, { marginTop: 20 }]}
+        onPress={() => refreshLocation()}
+      >
+        <Text style={styles.buttonText}>REFRESH</Text>
+      </TouchableOpacity>
+
       <TouchableOpacity
         style={[styles.button, styles.infoButton, { marginTop: 20 }]}
         onPress={() => DataLogic.importFromFile({ clearExisting: false })}
       >
         <Text style={styles.buttonText}>IMPORT</Text>
       </TouchableOpacity>
+
       <TouchableOpacity
         style={[styles.button, styles.infoButton, { marginTop: 20 }]}
         onPress={() => DataLogic.exportToFile()}
