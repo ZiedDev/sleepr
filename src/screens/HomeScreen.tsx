@@ -5,6 +5,7 @@ import { useLocation } from '../hooks/useLocation';
 import { db } from '../db/db';
 import { SleepLogic, toISODate, DataLogic } from '../db/logic';
 import { useStorage } from '../db/storage';
+import * as Haptics from 'expo-haptics';
 
 export default function HomeScreen() {
   const [dbReady, setDbReady] = useState(false);
@@ -28,6 +29,7 @@ export default function HomeScreen() {
   }, []);
 
   const handleToggleTracking = async () => {
+    Haptics.selectionAsync();
     const lat = location?.coords.latitude ?? null;
     const lon = location?.coords.longitude ?? null;
 
@@ -91,21 +93,21 @@ export default function HomeScreen() {
 
       <TouchableOpacity
         style={[styles.button, styles.startButton, { marginTop: 20 }]}
-        onPress={() => refreshLocation()}
+        onPress={() => { refreshLocation(); Haptics.selectionAsync(); }}
       >
         <Text style={styles.buttonText}>REFRESH</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
         style={[styles.button, styles.infoButton, { marginTop: 20 }]}
-        onPress={() => DataLogic.importFromFile({ clearExisting: false })}
+        onPress={() => { DataLogic.importFromFile({ clearExisting: false }); Haptics.selectionAsync(); }}
       >
         <Text style={styles.buttonText}>IMPORT</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
         style={[styles.button, styles.infoButton, { marginTop: 20 }]}
-        onPress={() => DataLogic.exportToFile()}
+        onPress={() => { DataLogic.exportToFile(); Haptics.selectionAsync(); }}
       >
         <Text style={styles.buttonText}>EXPORT</Text>
       </TouchableOpacity>
