@@ -11,7 +11,7 @@ let _db_initial: IDBPDatabase | null = null;
 const _db = new Proxy({} as IDBPDatabase, {
   get(target, prop, receiver) {
     if (!_db_initial) {
-      throw new Error(`Attempted to access DB before calling db.init()`);
+      throw new Error("[db.web] Database accessed before initialization. Call initDB() first");
     }
     const value = Reflect.get(_db_initial, prop, receiver);
     return typeof value === 'function' ? value.bind(_db_initial) : value;
@@ -95,7 +95,7 @@ export const db: Database = {
       input.onchange = async () => {
         const file = input.files?.[0];
         if (!file) {
-          reject(new Error('No file selected'));
+          reject(new Error("[db.web] No file selected"));
           return;
         }
 

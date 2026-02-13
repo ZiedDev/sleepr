@@ -4,7 +4,7 @@ export type UUID = string;
 export type Timestamp = DateTime | Date | EpochSec | string;
 export type EpochSec = number & { __brand: 'EpochSec' };     // Unix epoch seconds
 export type ISODate = string & { __brand: 'ISODate' };       // YYYY-MM-DD
-export type Coordinate = number & { __brand: 'Coordinate' }; // 2 decimal precision
+export type Coordinate = number & { __brand: 'Coordinate' }; // 2 decimal precision / ~1.1km / ~2min sunset
 
 export interface SleepSessionRecord {
     readonly id: UUID;
@@ -26,8 +26,8 @@ export interface SunTimesRecord {
 }
 
 export interface CurrentSession {
-    start: Timestamp;
-    end?: Timestamp;
+    start: EpochSec;
+    end?: EpochSec;
     lat?: Coordinate | null;
     lon?: Coordinate | null;
 }
