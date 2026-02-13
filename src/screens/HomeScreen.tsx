@@ -2,8 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useLocation } from '../hooks/useLocation';
-import { db } from '../db/db';
-import { SleepLogic, toISODate, DataLogic } from '../db/logic';
+import { initDB, SleepLogic, toISODate, DataLogic } from '../db/logic';
 import { useStorage } from '../db/storage';
 import * as Haptics from 'expo-haptics';
 
@@ -17,15 +16,14 @@ export default function HomeScreen() {
   const isLoading = !dbReady || locationLoading;
 
   useEffect(() => {
-    async function setup() {
+    (async () => {
       try {
-        await db.init();
+        await initDB();
         setDbReady(true);
       } catch (e) {
         console.error("Database init failed", e);
       }
-    }
-    setup();
+    })();
   }, []);
 
   const handleToggleTracking = async () => {

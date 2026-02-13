@@ -103,6 +103,8 @@ export const runConcurrent = async <T>(
 
 // -------------------- Logic --------------------
 
+export const initDB = async () => await db.init();
+
 export const SleepLogic = {
   async create({ id, start, end, lat, lon }: {
     id?: UUID
@@ -191,28 +193,38 @@ export const SleepLogic = {
     lon: number | null,
   }): void {
     useStorage.getState().setCurrentSession({
-      start: DateTime.now().toISO(),
+      start: toEpochSec(DateTime.now())!,
       lat: toCoordinate(lat),
       lon: toCoordinate(lon),
     });
   },
 
-  async stopTracking({ lat, lon }: {
-    lat: number | null,
-    lon: number | null,
+  async stopTracking({ lat, lon, minDuration = Duration.fromObject({ minutes: 15 }) }: {
+    lat: number | null;
+    lon: number | null;
+    minDuration?: Duration;
   }): Promise<SleepSessionRecord> {
     const current = useStorage.getState().currentSession;
     if (!current) throw new Error('no active session to stop');
 
-    const record = await this.create({
-      ...current,
-      end: DateTime.now().toISO(),
-      lat: current.lat ?? toCoordinate(lat),
-      lon: current.lon ?? toCoordinate(lon),
-    });
-
     // enforce location save
     if (!lat || !lon) throw new Error('lat and lon required');
+
+    const session = {
+      ...current,
+      end: toEpochSec(DateTime.now())!,
+      lat: current.lat ?? toCoordinate(lat),
+      lon: current.lon ?? toCoordinate(lon),
+    }
+
+    // enforce minimum duration
+    if (minDuration) {
+      const durationSec = session.end - session.start;
+      const minSec = minDuration.as('seconds');
+      if (durationSec < minSec) throw new Error(`sleep session too short: ${durationSec}s recorded, minimum required is ${minSec}s.`);
+    }
+
+    const record = await this.create(session);
 
     useStorage.getState().setCurrentSession(null);
     return record;

@@ -26,8 +26,8 @@ export interface SunTimesRecord {
 }
 
 export interface CurrentSession {
-    start: Timestamp;
-    end?: Timestamp;
+    start: EpochSec;
+    end?: EpochSec;
     lat?: Coordinate | null;
     lon?: Coordinate | null;
 }
