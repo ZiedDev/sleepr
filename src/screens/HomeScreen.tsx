@@ -21,7 +21,7 @@ export default function HomeScreen() {
         await initDB();
         setDbReady(true);
       } catch (e) {
-        console.error("Database init failed", e);
+        console.error("[HomeScreen] Database init failed", e);
       }
     })();
   }, []);
@@ -34,13 +34,13 @@ export default function HomeScreen() {
     try {
       if (isTracking) {
         await SleepLogic.stopTracking({ lat, lon });
-        console.log("Tracking stopped and saved.");
+        console.log("[HomeScreen] Tracking stopped and saved.");
       } else {
         SleepLogic.startTracking({ lat, lon });
-        console.log("Tracking started.");
+        console.log("[HomeScreen] Tracking started.");
       }
     } catch (error) {
-      console.error("Failed to toggle tracking:", error);
+      console.error("[HomeScreen] Failed to toggle tracking:", error);
     }
   };
 

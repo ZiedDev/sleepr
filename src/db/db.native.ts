@@ -13,7 +13,7 @@ let _db_initial: SQLite.SQLiteDatabase | null = null;
 const _db = new Proxy({} as SQLite.SQLiteDatabase, {
   get(target, prop, receiver) {
     if (!_db_initial) {
-      throw new Error(`Attempted to access DB before calling db.init()`);
+      throw new Error("[db.native] Database accessed before initialization. Call initDB() first");
     }
     const value = Reflect.get(_db_initial, prop, receiver);
     return typeof value === 'function' ? value.bind(_db_initial) : value;
@@ -150,14 +150,14 @@ export const db: Database = {
         type: 'application/json',
       });
       if (result.canceled) {
-        throw new Error('User cancelled import');
+        throw new Error("[db.native] User canceled import");
       }
       const { uri } = result.assets[0];
 
       const jsonString = await fetch(uri).then(res => res.text());
       return JSON.parse(jsonString);
     } catch (error) {
-      console.error("Import Error:", error);
+      throw new Error(`[db.native] Import error: ${error}`);
       throw error;
     }
   },
@@ -180,7 +180,7 @@ export const db: Database = {
         const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
 
         if (!permissions.granted) {
-          throw new Error("User cancelled folder picker");
+          throw new Error("[db.native] User canceled folder selection");
         } else {
           const fileUri = await FileSystem.StorageAccessFramework.createFileAsync(
             permissions.directoryUri,
@@ -203,7 +203,7 @@ export const db: Database = {
       });
 
     } catch (error) {
-      console.error("Export Error:", error);
+      throw new Error(`[db.native] Export error: ${error}`);
       throw error;
     }
   },

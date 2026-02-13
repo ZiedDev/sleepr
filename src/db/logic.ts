@@ -116,8 +116,8 @@ export const SleepLogic = {
     const startEpoch = toEpochSec(start);
     const endEpoch = toEpochSec(end);
 
-    if (startEpoch == null || endEpoch == null) throw new Error('start and end are required');
-    if (endEpoch < startEpoch) throw new Error('end cannot be before start');
+    if (startEpoch == null || endEpoch == null) throw new Error("[logic] Start and end are required");
+    if (endEpoch < startEpoch) throw new Error("[logic] End cannot be before start");
 
     const record: SleepSessionRecord = {
       id: id ?? generateUUID(),
@@ -138,7 +138,7 @@ export const SleepLogic = {
   },
 
   async get(id: UUID): Promise<SleepSessionRecord | null> {
-    if (!id) throw new Error('id required');
+    if (!id) throw new Error("[logic] ID is required");
     return db.getSleep(id);
   },
 
@@ -150,10 +150,10 @@ export const SleepLogic = {
     lon?: number | null,
   }): Promise<SleepSessionRecord> {
     return await db.runTransaction(async () => {
-      if (!id) throw new Error('id required');
+      if (!id) throw new Error("[logic] ID is required");
 
       const existing = await db.getSleep(id);
-      if (!existing) throw new Error('record not found');
+      if (!existing) throw new Error("[logic] Record not found");
 
       const nowEpoch: EpochSec = toEpochSec(DateTime.now())!;
 
@@ -175,7 +175,7 @@ export const SleepLogic = {
   },
 
   async delete(id: UUID): Promise<boolean> {
-    if (!id) throw new Error('id required');
+    if (!id) throw new Error("[logic] ID is required");
 
     const result = await db.deleteSleep(id);
 
@@ -205,10 +205,10 @@ export const SleepLogic = {
     minDuration?: Duration;
   }): Promise<SleepSessionRecord> {
     const current = useStorage.getState().currentSession;
-    if (!current) throw new Error('no active session to stop');
+    if (!current) throw new Error("[logic] No active session to stop");
 
     // enforce location save
-    if (!lat || !lon) throw new Error('lat and lon required');
+    if (!lat || !lon) throw new Error("[logic] Latitude and longitude are required");
 
     const session = {
       ...current,
@@ -221,7 +221,7 @@ export const SleepLogic = {
     if (minDuration) {
       const durationSec = session.end - session.start;
       const minSec = minDuration.as('seconds');
-      if (durationSec < minSec) throw new Error(`sleep session too short: ${durationSec}s recorded, minimum required is ${minSec}s.`);
+      if (durationSec < minSec) throw new Error(`[logic] Sleep session too short: ${durationSec}s recorded; minimum is ${minSec}s`);
     }
 
     const record = await this.create(session);
@@ -238,8 +238,8 @@ export const SleepLogic = {
     const rangeStartEpoch = toEpochSec(rangeStart);
     const rangeEndEpoch = toEpochSec(rangeEnd);
 
-    if (rangeStartEpoch == null || rangeEndEpoch == null) throw new Error('rangeStart and rangeEnd required');
-    if (rangeEndEpoch < rangeStartEpoch) throw new Error('rangeEnd cannot be before rangeStart');
+    if (rangeStartEpoch == null || rangeEndEpoch == null) throw new Error("[logic] rangeStart and rangeEnd are required");
+    if (rangeEndEpoch < rangeStartEpoch) throw new Error("[logic] rangeEnd cannot be before rangeStart");
 
     const where =
       match === 'contained'
@@ -261,7 +261,7 @@ export const SunLogic = {
     const sunriseEpoch = toEpochSec(sunrise);
     const sunsetEpoch = toEpochSec(sunset);
 
-    if (sunriseEpoch == null || sunsetEpoch == null) throw new Error('sunrise and sunset required');
+    if (sunriseEpoch == null || sunsetEpoch == null) throw new Error("[logic] Sunrise and sunset are required");
 
     const dateISO = toISODate(date);
     const latCoordinate = toCoordinate(lat);
@@ -270,7 +270,7 @@ export const SunLogic = {
     if (dateISO == null ||
       latCoordinate == null ||
       lonCoordinate == null
-    ) throw new Error('date, lat and lon required');
+    ) throw new Error("[logic] Date, latitude, and longitude are required");
 
     const nowEpoch: EpochSec = toEpochSec(DateTime.now())!;
 
@@ -300,7 +300,7 @@ export const SunLogic = {
     if (dateISO == null ||
       latCoordinate == null ||
       lonCoordinate == null
-    ) throw new Error('date, lat and lon required');
+    ) throw new Error("[logic] Date, latitude, and longitude are required");
 
     return db.getSun(dateISO, latCoordinate, lonCoordinate);
   },
@@ -315,14 +315,14 @@ export const SunLogic = {
     const dateEndISO = toISODate(dateEnd);
 
     if (dateStartISO == null || dateEndISO == null) {
-      throw new Error('dateStart and dateEnd required');
+      throw new Error("[logic] dateStart and dateEnd are required");
     }
-    if (dateEndISO < dateStartISO) throw new Error('dateEnd cannot be dateStart rangeStart');
+    if (dateEndISO < dateStartISO) throw new Error("[logic] dateEnd cannot be before dateStart");
 
     const latCoordinate = toCoordinate(lat);
     const lonCoordinate = toCoordinate(lon);
 
-    if (latCoordinate == null || lonCoordinate == null) throw new Error('lat and lon required');
+    if (latCoordinate == null || lonCoordinate == null) throw new Error("[logic] Latitude and longitude are required");
 
 
     return await db.listSun(latCoordinate, lonCoordinate, dateStartISO, dateEndISO);
@@ -343,14 +343,14 @@ export const SunLogic = {
     if (dateISO == null ||
       latCoordinate == null ||
       lonCoordinate == null
-    ) throw new Error('date, lat and lon required');
+    ) throw new Error("[logic] Date, latitude, and longitude are required");
 
 
     const url = `https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lon}&date=${dateISO}&formatted=0`;
     const res = await fetch(url);
-    if (!res.ok) throw new Error(`sunrise-sunset.org error: ${res.status}`);
+    if (!res.ok) throw new Error(`[logic] Sunrise-Sunset API error: ${res.status}`);
     const data = await res.json();
-    if (data.status !== 'OK') throw new Error(`API returned ${data.status}`);
+    if (data.status !== 'OK') throw new Error(`[logic] API returned status: ${data.status}`);
 
     return await this.put({
       date,
@@ -371,14 +371,14 @@ export const SunLogic = {
     const endEpoch = toEpochSec(dateEnd);
 
     if (startEpoch == null || endEpoch == null) {
-      throw new Error('dateStart and dateEnd required');
+      throw new Error("[logic] dateStart and dateEnd are required");
     }
-    if (endEpoch < startEpoch) throw new Error('dateEnd cannot be dateStart rangeStart');
+    if (endEpoch < startEpoch) throw new Error("[logic] dateEnd cannot be before dateStart");
 
     const latCoordinate = toCoordinate(lat);
     const lonCoordinate = toCoordinate(lon);
 
-    if (latCoordinate == null || lonCoordinate == null) throw new Error('lat and lon required');
+    if (latCoordinate == null || lonCoordinate == null) throw new Error("[logic] Latitude and longitude are required");
 
     const cached = await this.list({ dateStart, dateEnd, lat, lon });
     const cachedMap = new Map(cached.map(r => [r.date, r]));
@@ -434,7 +434,7 @@ export const StatsLogic = {
   },
 
   getAverages(records: SleepSessionRecord[]): AveragesResult {
-    if (records.length === 0) throw new Error('No records provided');
+    if (records.length === 0) throw new Error("[logic] No records provided");
 
     const startMean = this._timeMean(records.map(r => r.start));
     const endMean = this._timeMean(records.map(r => r.end));
@@ -497,7 +497,7 @@ export const StatsLogic = {
     records: SleepSessionRecord[],
     { lat, lon, width = 100 }: { lat: number, lon: number, width?: number }
   ): Promise<IntervalTimeline> {
-    if (records.length === 0) throw new Error('No records provided');
+    if (records.length === 0) throw new Error("[logic] No records provided");
 
     // Sort by middle point for visual continuity
     const processed = records.map(r => ({ ...r, middle: (r.start + r.end) / 2 }));
