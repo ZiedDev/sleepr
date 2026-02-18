@@ -1,8 +1,13 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Dimensions, StyleSheet, View } from 'react-native';
+import BackgroundArt from '../../assets/svgs/BackgroundArt';
 
-export default function BackgroundScreen() {
-    return <View style={styles.background} />;
+export default function BackgroundScreen({...props}) {
+    return (
+        <View style={styles.background} {...props}>
+            <BackgroundArt size={Dimensions.get("window").width} style={styles.art} />
+        </View>
+    );
 }
 
 const styles = StyleSheet.create({
@@ -10,6 +15,9 @@ const styles = StyleSheet.create({
         width: "100%",
         height: "100%",
         position: "absolute",
-        backgroundColor: '#2e2e2e',
+        backgroundColor: '#244447',
     },
+
+    art: {
+    }
 });

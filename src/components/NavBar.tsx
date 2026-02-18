@@ -39,6 +39,13 @@ export default function NavBar({
         <PhGearBold style={navState == "Settings" ? styles.iconSelected : ""} fill={navState == "Settings" ? "#13b4e6" : "white"} />
         <Text style={[styles.buttonText, navState == "Settings" ? styles.textSelected : ""]}>Settings</Text>
       </TouchableOpacity>
+
+      <SafeBlurView
+        style={styles.navSelector}
+        tint="systemChromeMaterialDark"
+        intensity={42}
+        experimentalBlurMethod='dimezisBlurView'
+        blurReductionFactor={20}></SafeBlurView>
     </SafeBlurView>
   );
 }
@@ -65,7 +72,8 @@ const styles = StyleSheet.create({
   button: {
     display: "flex",
     alignItems: "center",
-    width: "33.333%"
+    position: "relative",
+    zIndex: 2,
   },
 
   buttonText: {
@@ -86,15 +94,20 @@ const styles = StyleSheet.create({
     textShadowRadius: 2.5,
     textShadowOffset: { width: 0, height: 0 }
   },
-  absolute: {
+
+  navSelector: {
     position: "absolute",
     top: 0,
-    left: 0,
+    left: (Dimensions.get("window").width - 32) / 3 * 1,
+    width: (Dimensions.get("window").width - 32) / 3,
     bottom: 0,
-    right: 0
-  },
-  temp: {
-    width: "33.333%",
-    backgroundColor: "#fff0000"
+    backgroundColor: "rgba(17, 0, 48, 0.15)",
+    margin: 6,
+    borderCurve: "continuous",
+    borderStyle: "solid",
+    borderWidth: 2,
+    borderColor: "rgba(67, 67, 67, 0.6)",
+    borderRadius: 24,
+    overflow: "hidden",
   },
 });
