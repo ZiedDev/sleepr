@@ -7,11 +7,12 @@ import { initDB, SleepLogic, toISODate, DataLogic } from '../db/logic';
 import { useStorage } from '../db/storage';
 import Slider from '@react-native-community/slider';
 import * as Haptics from 'expo-haptics';
+import { DateTime } from 'luxon';
 
 export default function HomeScreen() {
   const [dbReady, setDbReady] = useState(false);
   const { location, errorMsg, loading: locationLoading, refresh: refreshLocation } = useLocation();
-  const [sliderValue, setSliderValue] = useState<number>(50);
+  const [sliderValue, setSliderValue] = useState<number>(DateTime.now().hour);
   const backgroundColors = useBackgroundColors(sliderValue);
 
   const currentSession = useStorage((state) => state.currentSession);
