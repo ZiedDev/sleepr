@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, ActivityIndicator, TouchableOpacity, Switch } from 'react-native';
 import { useLocation } from '../hooks/useLocation';
 import { initDB, SleepLogic, toISODate, DataLogic } from '../db/logic';
 import { useStorage } from '../db/storage';
@@ -9,6 +9,7 @@ import * as Haptics from 'expo-haptics';
 export default function HomeScreen() {
   const [dbReady, setDbReady] = useState(false);
   const { location, errorMsg, loading: locationLoading, refresh: refreshLocation } = useLocation();
+  const [isHide, setHide] = useState(false);
 
   const currentSession = useStorage((state) => state.currentSession);
   const isTracking = !!currentSession;
@@ -49,66 +50,75 @@ export default function HomeScreen() {
     <View style={styles.container}>
       <StatusBar style="light" />
 
-      <Text style={styles.text}>Database status:</Text>
-      {dbReady ? (
-        <Text style={styles.validText}>initialized</Text>
-      ) : (
-        <ActivityIndicator size="large" color={styles.indicator.color} />
-      )}
+      <Switch
+        value={isHide}
+        onValueChange={setHide}
+        trackColor={{ false: "#333", true: "#109dc9" }}
+      />
 
-      <Text style={[styles.text, { marginTop: 20 }]}>Location:</Text>
-      {locationLoading ? (
-        <ActivityIndicator size="large" color={styles.indicator.color} />
-      ) : errorMsg ? (
-        <Text style={styles.errorText}>{errorMsg}</Text>
-      ) : (
-        <Text style={styles.validText}>
-          {location?.coords.latitude.toFixed(4)}, {location?.coords.longitude.toFixed(4)}
-        </Text>
-      )}
+      {!isHide ? (<>
+        <Text style={styles.text}>Database status:</Text>
+        {dbReady ? (
+          <Text style={styles.validText}>initialized</Text>
+        ) : (
+          <ActivityIndicator size="large" color={styles.indicator.color} />
+        )}
 
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={[styles.button, isTracking ? styles.stopButton : styles.startButton]}
-          onPress={handleToggleTracking}
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>
-              {isTracking ? 'STOP TRACKING' : 'START TRACKING'}
-            </Text>
-          )}
-        </TouchableOpacity>
-
-        {isTracking && currentSession && (
-          <Text style={styles.trackingNote}>
-            Session started: {toISODate(currentSession.start)}
+        <Text style={[styles.text, { marginTop: 20 }]}>Location:</Text>
+        {locationLoading ? (
+          <ActivityIndicator size="large" color={styles.indicator.color} />
+        ) : errorMsg ? (
+          <Text style={styles.errorText}>{errorMsg}</Text>
+        ) : (
+          <Text style={styles.validText}>
+            {location?.coords.latitude.toFixed(4)}, {location?.coords.longitude.toFixed(4)}
           </Text>
         )}
-      </View>
 
-      <TouchableOpacity
-        style={[styles.button, styles.startButton, { marginTop: 20 }]}
-        onPress={() => { refreshLocation(); Haptics.selectionAsync(); }}
-      >
-        <Text style={styles.buttonText}>REFRESH</Text>
-      </TouchableOpacity>
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity
+            style={[styles.button, isTracking ? styles.stopButton : styles.startButton]}
+            onPress={handleToggleTracking}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>
+                {isTracking ? 'STOP TRACKING' : 'START TRACKING'}
+              </Text>
+            )}
+          </TouchableOpacity>
 
-      <TouchableOpacity
-        style={[styles.button, styles.infoButton, { marginTop: 20 }]}
-        onPress={() => { DataLogic.importFromFile({ clearExisting: false }); Haptics.selectionAsync(); }}
-      >
-        <Text style={styles.buttonText}>IMPORT</Text>
-      </TouchableOpacity>
+          {isTracking && currentSession && (
+            <Text style={styles.trackingNote}>
+              Session started: {toISODate(currentSession.start)}
+            </Text>
+          )}
+        </View>
 
-      <TouchableOpacity
-        style={[styles.button, styles.infoButton, { marginTop: 20 }]}
-        onPress={() => { DataLogic.exportToFile(); Haptics.selectionAsync(); }}
-      >
-        <Text style={styles.buttonText}>EXPORT</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.button, styles.startButton, { marginTop: 20 }]}
+          onPress={() => { refreshLocation(); Haptics.selectionAsync(); }}
+        >
+          <Text style={styles.buttonText}>REFRESH</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.button, styles.infoButton, { marginTop: 20 }]}
+          onPress={() => { DataLogic.importFromFile({ clearExisting: false }); Haptics.selectionAsync(); }}
+        >
+          <Text style={styles.buttonText}>IMPORT</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.button, styles.infoButton, { marginTop: 20 }]}
+          onPress={() => { DataLogic.exportToFile(); Haptics.selectionAsync(); }}
+        >
+          <Text style={styles.buttonText}>EXPORT</Text>
+        </TouchableOpacity>
+
+      </>) : (<></>)}
     </View>
   );
 }
