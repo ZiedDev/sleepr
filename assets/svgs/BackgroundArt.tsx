@@ -37,6 +37,7 @@ const theme = {
   hills2: "#506487",
 
   stars: "#fff",
+  starsOpacity: 0,
   starsGlow: "#fff",
 
   sun1: "#fefcb2",
@@ -298,7 +299,7 @@ export function BackgroundArt({ size = 200, colors = theme, ...props }) {
           </G>
 
           {/* Stars*/}
-          <G opacity={0} filter="url(#outer-glow-stars)">
+          <G opacity={colors.starsOpacity} filter="url(#outer-glow-stars)">
             {[
               [71.67, 89.61], [186.24, 202.86], [143.25, 205.2], [508.98, 136.03], [326.13, 122.68],
               [282.79, 82.66], [262.75, 116.6], [225.19, 80.31], [237.5, 105.75], [263.93, 94.69],
