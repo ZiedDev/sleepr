@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.2.0",
+    "@react-native-community/slider": "5.0.1",
     "babel-preset-expo": "~54.0.10",
     "expo": "~54.0.33",
     "expo-blur": "~15.0.8",
@@ -45,6 +46,9 @@
     "@types/luxon": "^3.7.1",
     "@types/react": "~19.1.0",
     "typescript": "~5.9.2"
+  },
+  "overrides": {
+    "minimatch": "^10.2.1"
   },
   "private": true
 }

@@ -2,13 +2,17 @@ import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useLocation } from '../hooks/useLocation';
+import { useBackgroundColors } from '../hooks/useColors';
 import { initDB, SleepLogic, toISODate, DataLogic } from '../db/logic';
 import { useStorage } from '../db/storage';
+import Slider from '@react-native-community/slider';
 import * as Haptics from 'expo-haptics';
 
 export default function HomeScreen() {
   const [dbReady, setDbReady] = useState(false);
   const { location, errorMsg, loading: locationLoading, refresh: refreshLocation } = useLocation();
+  const [sliderValue, setSliderValue] = useState<number>(50);
+  const backgroundColors = useBackgroundColors(sliderValue);
 
   const currentSession = useStorage((state) => state.currentSession);
   const isTracking = !!currentSession;
@@ -48,6 +52,15 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
+
+      <Text style={styles.validText}>{backgroundColors.value.t}, {sliderValue}</Text>
+      <Slider
+        style={{ width: '70%', height: 40 }}
+        minimumValue={0}
+        maximumValue={24}
+        value={sliderValue}
+        onValueChange={(value) => setSliderValue(value)}
+      />
 
       <Text style={styles.text}>Database status:</Text>
       {dbReady ? (
