@@ -217,6 +217,8 @@ export const SleepLogic = {
       lon: current.lon ?? toCoordinate(lon),
     }
 
+    useStorage.getState().setCurrentSession(null);
+
     // enforce minimum duration
     if (minDuration) {
       const durationSec = session.end - session.start;
@@ -225,8 +227,6 @@ export const SleepLogic = {
     }
 
     const record = await this.create(session);
-
-    useStorage.getState().setCurrentSession(null);
     return record;
   },
 
@@ -589,7 +589,7 @@ export const DataLogic = {
 
     return {
       meta: {
-        exportedAt: new Date().toISOString() as ISODate,
+        exportedAt: toEpochSec(new Date())!,
       },
       sleepSessions: sleep,
       sunTimes: sun,
