@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useSharedValue, useDerivedValue, interpolateColor, interpolate } from 'react-native-reanimated';
+import { useSharedValue, useDerivedValue, interpolateColor, interpolate, withTiming, Easing } from 'react-native-reanimated';
 import { DateTime } from 'luxon';
 import { fromEpochSec, SunLogic, toEpochSec } from '../db/logic';
 import { useLocation } from '../hooks/useLocation';
@@ -14,7 +14,7 @@ export const useBackgroundColors = (hour?: number) => {
     useEffect(() => {
         const updateSolarPosition = () => {
             let now = DateTime.local();
-            if (hour) now = now.set({ hour, minute: 0, second: 0 });
+            if (hour) now = now.set({ hour, minute: hour / 60, second: hour / 3600 });
             // const sunData = SunLogic.request({
             //     date: now,
             //     lat: location?.coords.latitude,
@@ -32,7 +32,12 @@ export const useBackgroundColors = (hour?: number) => {
             ).seconds;
 
             // Normalize time: 0 = Sunrise, 1 = Sunset
-            solarProgress.value = secondsSinceSunrise / sunData.daylength;
+            const newProgress = secondsSinceSunrise / sunData.daylength;
+
+            solarProgress.value = withTiming(newProgress, {
+                duration: 1000,
+                easing: Easing.linear,
+            });
         };
 
         updateSolarPosition();
