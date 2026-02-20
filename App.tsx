@@ -21,7 +21,7 @@ export default function App() {
 
   return (
     <>
-      <BackgroundScreen solarProgress={solarProgress}/>
+      {/* <BackgroundScreen solarProgress={solarProgress}/> */}
       <View style={styles.margins}>
         {page[navState]}
         <NavBar navState={navState} setNavState={setNavState} />

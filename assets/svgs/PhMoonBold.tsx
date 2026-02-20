@@ -2,7 +2,7 @@ import React from 'react';
 
 import Svg, { Path } from 'react-native-svg';
 
-export function PhMoonBold({ size = 25 , fill = "#000000", ...props}) {
+export function PhMoonBold({ size = 25, fill = "#000000", ...props }) {
    return (
       <Svg width={size} height={size} viewBox="0 0 256 256" {...props}>
          {/* Icon from Phosphor by Phosphor Icons - https://github.com/phosphor-icons/core/blob/main/LICENSE */}

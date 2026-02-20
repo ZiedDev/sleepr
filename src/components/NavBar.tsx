@@ -1,12 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, Dimensions } from 'react-native';
-import Animated, { useSharedValue } from 'react-native-reanimated';
+import Animated, { cubicBezier } from 'react-native-reanimated';
 import SafeBlurView from './SafeBlurView';
 import PhMoonBold from '../../assets/svgs/PhMoonBold';
 import PhChartBarBold from '../../assets/svgs/PhChartBarBold';
 import PhGearBold from '../../assets/svgs/PhGearBold';
 
-type NavState = "Home" | "Statistics" | "Settings";
+const navOptions = ["Statistics", "Home", "Settings"] as const;
+
+type NavState = typeof navOptions[number];
+
+const NavSelectorComponent = Animated.createAnimatedComponent(SafeBlurView);
+const AnimatedText = Animated.createAnimatedComponent(Text);
 
 export default function NavBar({
   navState,
@@ -27,25 +32,26 @@ export default function NavBar({
 
       <TouchableOpacity style={styles.button} onPress={() => setNavState("Statistics")}>
         <PhChartBarBold style={navState == "Statistics" ? styles.iconSelected : ""} fill={navState == "Statistics" ? "#13b4e6" : "white"} />
-        <Text style={[styles.buttonText, navState == "Statistics" ? styles.textSelected : ""]}>Statistics</Text>
+        <AnimatedText style={[{ transitionDuration: 500, transitionTimingFunction: cubicBezier(.5, .05, .53, 1.3), transitionProperty: 'all' }, [styles.buttonText, navState == "Statistics" ? styles.textSelected : ""]]}>Statistics</AnimatedText>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.button} onPress={() => setNavState("Home")}>
         <PhMoonBold style={navState == "Home" ? styles.iconSelected : ""} fill={navState == "Home" ? "#13b4e6" : "white"} />
-        <Text style={[styles.buttonText, navState == "Home" ? styles.textSelected : ""]}>Home</Text>
+        <AnimatedText style={[{ transitionDuration: 500, transitionTimingFunction: cubicBezier(.5, .05, .53, 1.3), transitionProperty: 'all' }, [styles.buttonText, navState == "Home" ? styles.textSelected : ""]]}>Home</AnimatedText>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.button} onPress={() => setNavState("Settings")}>
         <PhGearBold style={navState == "Settings" ? styles.iconSelected : ""} fill={navState == "Settings" ? "#13b4e6" : "white"} />
-        <Text style={[styles.buttonText, navState == "Settings" ? styles.textSelected : ""]}>Settings</Text>
+        <AnimatedText style={[{ transitionDuration: 500, transitionTimingFunction: cubicBezier(.5, .05, .53, 1.3), transitionProperty: 'all' }, [styles.buttonText, navState == "Settings" ? styles.textSelected : ""]]}>Settings</AnimatedText>
       </TouchableOpacity>
 
-      <SafeBlurView
-        style={styles.navSelector}
+      <NavSelectorComponent
+        style={[styles.navSelector, { transitionDuration: 500, transitionTimingFunction: cubicBezier(.5, .05, .53, 1.3), transitionProperty: 'left', left: (Dimensions.get("window").width - 32) / 3 * navOptions.indexOf(navState), }]}
         tint="systemChromeMaterialDark"
         intensity={42}
         experimentalBlurMethod='dimezisBlurView'
-        blurReductionFactor={20}></SafeBlurView>
+        blurReductionFactor={20} />
+
     </SafeBlurView>
   );
 }
