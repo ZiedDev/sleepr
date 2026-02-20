@@ -8,7 +8,7 @@ interface LocationState {
     loading: boolean;
 }
 
-const maxAge = 172800000 // 2*24*60*60*1000 (ms in 2 days)
+const maxAge = 172800000; // 2*24*60*60*1000 (ms in 2 days)
 
 export const useLocation = () => {
     const [state, setState] = useState<LocationState>({

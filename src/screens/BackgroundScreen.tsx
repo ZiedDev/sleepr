@@ -1,11 +1,14 @@
-import React from 'react';
-import { Dimensions, StyleSheet, View } from 'react-native';
+import React, { useState } from 'react';
+import { Dimensions, StyleSheet, View, Text } from 'react-native';
 import BackgroundArt from '../../assets/svgs/BackgroundArt';
+import { useBackgroundColors } from '../hooks/useColors';
+import { SharedValue } from 'react-native-reanimated';
 
-export default function BackgroundScreen({...props}) {
+export default function BackgroundScreen({ solarProgress, ...props }:{solarProgress:SharedValue<number>}) {
+    const animatedColors = useBackgroundColors(solarProgress);
     return (
         <View style={styles.background} {...props}>
-            <BackgroundArt size={Dimensions.get("window").width} style={styles.art} />
+            <BackgroundArt size={Dimensions.get("window").width} colors={animatedColors} style={styles.art} />
         </View>
     );
 }
