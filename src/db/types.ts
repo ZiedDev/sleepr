@@ -79,7 +79,7 @@ export interface SplitInterval {
 
 export interface ExportData {
     meta: {
-        exportedAt: string;
+        exportedAt: EpochSec;
     };
     sleepSessions: SleepSessionRecord[];
     sunTimes: SunTimesRecord[];
