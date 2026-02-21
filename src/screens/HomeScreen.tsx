@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, ActivityIndicator, TouchableOpacity, Switch, Easing } from 'react-native';
+import { StyleSheet, Text, View, ActivityIndicator, TouchableOpacity, Switch } from 'react-native';
 import { useLocation } from '../hooks/useLocation';
 import { initDB, SleepLogic, toISODate, DataLogic } from '../db/logic';
 import { useStorage } from '../db/storage';
 import * as Haptics from 'expo-haptics';
-import { SharedValue, useAnimatedReaction, withTiming } from 'react-native-reanimated';
+import { SharedValue, useAnimatedReaction, withTiming, Easing } from 'react-native-reanimated';
 import { DateTime } from 'luxon';
 import Slider from '@react-native-community/slider';
 import { getProgress } from '../hooks/useColors';

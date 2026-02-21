@@ -11,9 +11,9 @@ export default function BackgroundScreen({ solarProgress, ...props }: { solarPro
         <View style={styles.background} {...props}>
             <Suspense fallback={<View />}>
                 <BackgroundArt
-                    // size={Dimensions.get("window").width}
-                    // colors={animatedColors}
-                    // style={styles.art}
+                    width={Dimensions.get("window").width}
+                    colors={animatedColors}
+                    style={styles.art}
                 />
             </Suspense>
         </View>
