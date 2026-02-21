@@ -5,19 +5,19 @@ import { fromEpochSec, SunLogic, toEpochSec } from '../db/logic';
 import { useLocation } from '../hooks/useLocation';
 import { backgroundColorLUT as LUT } from '../constants/colors';
 
-const updateInterval = 10000; // 60*1000 (ms in 1 minute)
+const updateInterval = 60000; // 60*1000 (ms in 1 minute)
 
 export const getProgress = (hour?: number) => {
     let now = DateTime.local();
     if (hour !== undefined) now = now.set({ hour });
     // const { location } = useLocation();
     // const sunData = SunLogic.request({
-            //     date: now,
-            //     lat: location?.coords.latitude,
-            //     lon: location?.coords.longitude
-            // });
+    //     date: now,
+    //     lat: location?.coords.latitude,
+    //     lon: location?.coords.longitude
+    // });
     const sunData = {
-        sunrise: toEpochSec("2026-02-20T04:36:17+00:00")!,
+        sunrise: toEpochSec(DateTime.now().set({ hour: 4, minute: 36 }))!,
         daylength: 40527,
     };
 
