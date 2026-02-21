@@ -1,7 +1,5 @@
-// SkiaProvider.web.tsx
 import React, { useEffect, useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
-// Note: Import ONLY the LoadSkiaWeb function, not the whole module
 import { LoadSkiaWeb } from '@shopify/react-native-skia/lib/module/web';
 
 export const SkiaProvider = ({ children }: { children: React.ReactNode }) => {
