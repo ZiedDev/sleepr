@@ -1,4 +1,5 @@
 import React from 'react';
+import { Platform } from 'react-native';
 import Animated, { SharedValue, useAnimatedProps } from 'react-native-reanimated';
 
 import Svg, { Path } from 'react-native-svg';
@@ -6,7 +7,11 @@ import Svg, { Path } from 'react-native-svg';
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
 export function PhMoonBold({ size = 25, color, ...props }: { size?: number, color: SharedValue<any> }) {
-   const fill = useAnimatedProps(() => ({ fill: color.value }));
+   const fill = useAnimatedProps(() => (
+      Platform.OS == 'web' ?
+         { color: color.value, fill: 'currentColor' } :
+         { fill: color.value }
+   ));
 
    return (
       <Svg width={size} height={size} viewBox="0 0 256 256" {...props}>
