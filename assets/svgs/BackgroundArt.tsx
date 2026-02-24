@@ -11,6 +11,7 @@ import {
   vec,
   BlurMask,
   Mask,
+  translate,
 } from '@shopify/react-native-skia';
 import { SharedValue, useDerivedValue } from 'react-native-reanimated';
 
@@ -35,6 +36,7 @@ const BackgroundArt = memo(({ width = 200, colors }: {
   };
 
   const sky = useDerivedValue(() => [colors.value.sky1, colors.value.sky2]);
+  const skyPos = useDerivedValue(() => [{ translateX: colors.value.skyPosX }, { translateY: colors.value.skyPosY }]);
 
   const stars = useDerivedValue(() => colors.value.stars);
   const starsOpacity = useDerivedValue(() => colors.value.starsOpacity);
@@ -43,10 +45,12 @@ const BackgroundArt = memo(({ width = 200, colors }: {
   const sun = useDerivedValue(() => [colors.value.sun1, colors.value.sun2]);
   const sunOpacity = useDerivedValue(() => colors.value.sunOpacity);
   const sunGlow = useDerivedValue(() => colors.value.sunGlow);
+  const sunPos = useDerivedValue(() => [{ translateX: colors.value.sunPosX }, { translateY: colors.value.sunPosY }]);
 
   const moon = useDerivedValue(() => colors.value.moon);
   const moonOpacity = useDerivedValue(() => colors.value.moonOpacity);
   const moonGlow = useDerivedValue(() => colors.value.moonGlow);
+  const moonPos = useDerivedValue(() => [{ translateX: colors.value.moonPosX }, { translateY: colors.value.moonPosY }]);
 
   const clouds = useDerivedValue(() => [colors.value.clouds1, colors.value.clouds2]);
 
@@ -69,7 +73,7 @@ const BackgroundArt = memo(({ width = 200, colors }: {
 
         {/* Sky Background */}
         <Rect x={1.16} y={0} width={1199} height={1197.24}>
-          <RadialGradient colors={sky}
+          <RadialGradient colors={sky} transform={skyPos}
             c={vec(1031.78, 329.03)}
             r={540.28}
           />
@@ -86,7 +90,7 @@ const BackgroundArt = memo(({ width = 200, colors }: {
         </Group>
 
         {/* Sun */}
-        <Group opacity={sunOpacity}>
+        <Group opacity={sunOpacity} transform={sunPos}>
           <Circle color={sunGlow} cx={1032.79} cy={328.7} r={111.5}>
             <BlurMask blur={20} style="outer" />
           </Circle>
@@ -96,7 +100,7 @@ const BackgroundArt = memo(({ width = 200, colors }: {
         </Group>
 
         {/* Moon */}
-        <Group>
+        <Group transform={moonPos}>
           <Path color={moonGlow} opacity={moonOpacity}
             path="M1117.6,401.08c-26.43,30.91-69.18,46.72-113.01,35.51-48.57-12.42-82.96-56.39-83.31-106.52-.32-45.29,25.38-83.01,61.8-101.18,2.13-1.06,4.35,1.32,3.09,3.34-8.27,13.27-13.86,28.48-15.94,45.01-7.67,61,36.14,117.16,97.17,124.58,16.59,2.02,32.78.28,47.7-4.55,2.27-.73,4.04,2,2.49,3.81Z"
           >

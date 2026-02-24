@@ -48,20 +48,10 @@ export default function NavBar({
   }));
 
   return (
-    <SafeBlurView
-      style={styles.container}
-      tint="systemChromeMaterialDark"
-      intensity={42}
-      experimentalBlurMethod='dimezisBlurView'
-      blurReductionFactor={20}
-    >
+    <SafeBlurView style={styles.container} intensity={42}>
       {/* Selector */}
       <Animated.View style={[styles.navSelector, selectorStyle]}>
-        <SafeBlurView
-          tint="systemChromeMaterialDark"
-          intensity={42}
-          experimentalBlurMethod='dimezisBlurView'
-          blurReductionFactor={20} />
+        <SafeBlurView intensity={42} />
       </Animated.View>
 
       {/* Nav Buttons */}

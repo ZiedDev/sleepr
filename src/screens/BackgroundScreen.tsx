@@ -1,9 +1,11 @@
 import React, { lazy, Suspense } from 'react';
-import { Dimensions, StyleSheet, View } from 'react-native';
+import { Dimensions, Platform, StyleSheet, View } from 'react-native';
 import { useBackgroundColors } from '../hooks/useColors';
 import Animated, { SharedValue, useAnimatedStyle } from 'react-native-reanimated';
 
-const BackgroundArt = lazy(() => import('../../assets/svgs/BackgroundArt'));
+const BackgroundArt = Platform.OS == 'web' ?
+    lazy(() => import('../../assets/svgs/BackgroundArt')) :
+    require('../../assets/svgs/BackgroundArt').default
 
 export default function BackgroundScreen({ solarProgress, ...props }: { solarProgress: SharedValue<number> }) {
     const animatedColors = useBackgroundColors(solarProgress);
