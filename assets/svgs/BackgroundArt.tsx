@@ -287,7 +287,7 @@ const BackgroundArt = memo(({ width = 200, colors }: {
 
       </Group>
       
-      { blur ?  (<BackdropBlur blur={blur} clip={{x: 0, y: 0, width: ORIGINAL_WIDTH, height: ORIGINAL_HEIGHT}} />) : (<></>)}
+      { blur ?  (<BackdropBlur blur={blur} transform={[{ scale }]} clip={{x: 0, y: 0, width: ORIGINAL_WIDTH, height: ORIGINAL_HEIGHT}} />) : (<></>)}
     </Canvas>
   );
 });
