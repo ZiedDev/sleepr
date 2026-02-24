@@ -1,14 +1,13 @@
 import React, { useCallback, useState } from 'react';
 import { Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import SafeBlurView from '../components/SafeBlurView';
-import { useLocation } from '../hooks/useLocation';
+import useLocation from '../hooks/useLocation';
 
 export default function StatsScreen() {
   const [refreshing, setRefreshing] = useState(false);
-  const { refresh: refreshLocation } = useLocation();
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await refreshLocation();
+    await useLocation.getState().refresh();
     // const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
     // await sleep(1000);
     setRefreshing(false);

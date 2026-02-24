@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useDerivedValue, interpolateColor, interpolate, withTiming, Easing, SharedValue } from 'react-native-reanimated';
 import { DateTime } from 'luxon';
 import { fromEpochSec, SunLogic, toEpochSec } from '../db/logic';
-import { useLocation } from '../hooks/useLocation';
+import useLocation from '../hooks/useLocation';
 import { backgroundColorLUT as LUT } from '../constants/colors';
 
 const updateInterval = 60000; // 60*1000 (ms in 1 minute)

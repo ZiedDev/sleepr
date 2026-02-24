@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import HomeScreen from "./src/screens/HomeScreen";
 import NavBar from "./src/components/NavBar";
 import { View, StyleSheet, Dimensions } from "react-native";
@@ -8,11 +8,16 @@ import BackgroundScreen from "./src/screens/BackgroundScreen";
 import { useSharedValue } from "react-native-reanimated";
 import { getProgress } from "./src/hooks/useColors";
 import { SkiaProvider } from "./SkiaProvider";
+import useLocation from "./src/hooks/useLocation";
 
 export default function App() {
   const [navState, setNavState] = useState<"Home" | "Statistics" | "Settings">('Home');
 
   const solarProgress = useSharedValue(getProgress());
+
+  useEffect(() => {
+        useLocation.getState().initialize();
+    }, []);
 
   const page = {
     "Home": <HomeScreen solarProgress={solarProgress} />,
