@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
     borderCurve: "continuous",
     borderStyle: "solid",
     borderWidth: 2,
-    borderColor: "rgba(67, 67, 67, 0.6)",
+    borderColor: "rgba(50, 50, 50, 0.6)",
     borderRadius: 24,
     boxSizing: "content-box",
     overflow: "hidden",

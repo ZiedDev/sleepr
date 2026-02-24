@@ -4,6 +4,7 @@ import { DateTime } from 'luxon';
 import { fromEpochSec, SunLogic, toEpochSec } from '../db/logic';
 import useLocation from '../hooks/useLocation';
 import { backgroundColorLUT as LUT } from '../constants/colors';
+import { Platform } from 'react-native';
 
 const updateInterval = 60000; // 60*1000 (ms in 1 minute)
 
@@ -47,6 +48,8 @@ export const useBackgroundColors = (progress: SharedValue<number>) => {
         const getVal = (arr: number[]) => interpolate(t, s, arr);
 
         return {
+            blur: Platform.OS == "android" ? 15 : 0,
+
             // SKY
             sky1: getCol(LUT.sky1),
             sky2: getCol(LUT.sky2),

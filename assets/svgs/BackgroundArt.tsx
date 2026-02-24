@@ -12,6 +12,7 @@ import {
   BlurMask,
   Mask,
   translate,
+  BackdropBlur,
 } from '@shopify/react-native-skia';
 import { SharedValue, useDerivedValue } from 'react-native-reanimated';
 
@@ -34,6 +35,8 @@ const BackgroundArt = memo(({ width = 200, colors }: {
     }
     return path + ' Z';
   };
+
+  const blur = useDerivedValue(() => colors.value.blur);
 
   const sky = useDerivedValue(() => [colors.value.sky1, colors.value.sky2]);
   const skyPos = useDerivedValue(() => [{ translateX: colors.value.skyPosX }, { translateY: colors.value.skyPosY }]);
@@ -283,6 +286,8 @@ const BackgroundArt = memo(({ width = 200, colors }: {
 
 
       </Group>
+      
+      { blur ?  (<BackdropBlur blur={blur} clip={{x: 0, y: 0, width: ORIGINAL_WIDTH, height: ORIGINAL_HEIGHT}} />) : (<></>)}
     </Canvas>
   );
 });

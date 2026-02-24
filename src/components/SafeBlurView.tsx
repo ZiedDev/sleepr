@@ -10,6 +10,7 @@ interface SafeBlurViewProps {
     tint?: BlurViewProps['tint'];
     experimentalBlurMethod?: BlurViewProps['experimentalBlurMethod'];
     blurReductionFactor?: BlurViewProps['blurReductionFactor'];
+    passThrough?: boolean;
 }
 
 export default function SafeBlurView({
@@ -19,9 +20,10 @@ export default function SafeBlurView({
     tint = 'systemChromeMaterialDark',
     experimentalBlurMethod = 'dimezisBlurView',
     blurReductionFactor = 20,
+    passThrough = false,
 }: SafeBlurViewProps) {
     const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
-    const useBlur = !(Platform.OS === 'android' && isExpoGo);
+    const useBlur = !(Platform.OS === 'android' && (passThrough || isExpoGo));
 
     if (useBlur) {
         return (
