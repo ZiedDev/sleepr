@@ -55,6 +55,8 @@ export const db: Database = {
   `);
   },
 
+  // Sleep Sessions
+
   async upsertSleep(r) {
     await _db.runAsync(
       `INSERT OR REPLACE INTO sleepSessions 
@@ -94,12 +96,14 @@ export const db: Database = {
     );
   },
 
+  // Sun Times
+
   async upsertSun(r) {
     await _db.runAsync(
       `INSERT OR REPLACE INTO sunTimes 
-      (date, lat, lon, sunrise, sunset, updatedAt) 
-      VALUES (?, ?, ?, ?, ?, ?)`,
-      [r.date, r.lat, r.lon, r.sunrise, r.sunset, r.updatedAt ?? null]
+      (date, lat, lon, sunrise, sunset, daylength, updatedAt) 
+      VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [r.date, r.lat, r.lon, r.sunrise, r.sunset, r.daylength, r.updatedAt ?? null]
     );
   },
 
@@ -124,6 +128,8 @@ export const db: Database = {
       `SELECT * FROM sunTimes`
     );
   },
+
+  // Transactions / Maintenance
 
   async runTransaction(action) {
     await _db.execAsync('BEGIN TRANSACTION');
