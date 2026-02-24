@@ -46,6 +46,7 @@ export const db: Database = {
             date TEXT NOT NULL,
             sunrise INTEGER NOT NULL,
             sunset INTEGER NOT NULL,
+            daylength INTEGER NOT NULL,
             updatedAt INTEGER,
             PRIMARY KEY (lat, lon, date)
         );

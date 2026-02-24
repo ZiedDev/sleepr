@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, ActivityIndicator, TouchableOpacity, Switch } from 'react-native';
 import useLocation from '../hooks/useLocation';
-import { initDB, SleepLogic, toISODate, DataLogic } from '../db/logic';
+import { initDB, SleepLogic, toISODate, DataLogic, SunLogic } from '../db/logic';
 import { useStorage } from '../db/storage';
 import * as Haptics from 'expo-haptics';
 import { SharedValue, useAnimatedReaction, withTiming, Easing } from 'react-native-reanimated';
@@ -10,13 +10,14 @@ import { DateTime } from 'luxon';
 import Slider from '@react-native-community/slider';
 import { getProgress } from '../hooks/useColors';
 import { runOnJS } from 'react-native-worklets';
+import { db } from '../db/db';
 
 export default function HomeScreen({ solarProgress }: { solarProgress: SharedValue<number> }) {
   const [dbReady, setDbReady] = useState(false);
   const { location, errorMsg, loading: locationLoading, refresh: refreshLocation } = useLocation();
   const [isHide, setHide] = useState(false);
   const [sliderValue, setSliderValue] = useState<number>(
-    DateTime.now().diff(DateTime.now().startOf('day'),'hours').hours
+    DateTime.now().diff(DateTime.now().startOf('day'), 'hours').hours
   );
 
   const [displayProgress, setDisplayProgress] = useState(0);
@@ -116,9 +117,29 @@ export default function HomeScreen({ solarProgress }: { solarProgress: SharedVal
 
         <TouchableOpacity
           style={[styles.button, styles.startButton, { marginTop: 20 }]}
-          onPress={() => { refreshLocation(); Haptics.selectionAsync(); }}
+          onPress={async () => {
+            if (location) {
+              const l = await SunLogic.request({
+                date: DateTime.now().plus({ day: 1 }).toISO(),
+                lat: location.coords.latitude,
+                lon: location.coords.longitude
+              })
+              console.log(l)
+            }
+            Haptics.selectionAsync();
+          }}
         >
-          <Text style={styles.buttonText}>REFRESH</Text>
+          <Text style={styles.buttonText}>TEST</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.button, styles.startButton, { marginTop: 20 }]}
+          onPress={async () => {
+            await DataLogic.clearAll();
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)
+          }}
+        >
+          <Text style={styles.buttonText}>CLEAR</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
