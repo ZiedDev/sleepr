@@ -1,7 +1,8 @@
-import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, Platform } from 'react-native';
 import SafeBlurView from '../components/SafeBlurView';
 import useLocation from '../hooks/useLocation';
+import useColorStore from '../hooks/useColors';
 
 export default function StatsScreen() {
   const [refreshing, setRefreshing] = useState(false);
@@ -12,6 +13,13 @@ export default function StatsScreen() {
     // await sleep(1000);
     setRefreshing(false);
   }, []);
+
+  if (['android', 'web'].includes(Platform.OS)) {
+    useEffect(() => {
+      useColorStore.getState().setBlur(15);
+    }, []);
+  }
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -25,7 +33,7 @@ export default function StatsScreen() {
         }
       >
         <Text style={styles.title}>
-          Lorem ipsum dolor sit amet consectetur adipisicing elit. Laboriosam animi fuga, fugit sequi dignissimos dolor commodi cupiditate cumque nihil maxime pariatur at quasi iusto blanditiis amet mollitia accusamus alias suscipit tenetur unde consequuntur itaque quaerat repellat vitae! Repudiandae, quaerat sit. Eaque repudiandae amet porro eligendi beatae vel enim eum fugiat tempora quia magnam consequatur nam dolorem facilis sapiente inventore deleniti necessitatibus error, vitae nostrum? Alias, dolorum.Lorem ipsum dolor sit amet consectetur adipisicing elit. Dolor labore itaque inventore excepturi ut voluptatum delectus nulla beatae sequi consequuntur error doloremque modi repudiandae ducimus dolore nam quas autem eius harum omnis, ullam corrupti molestiae quae incidunt? Eaque libero distinctio consequatur delectus quibusdam adipisci expedita nihil officiis quia qui, quidem id veritatis! Eaque minima recusandae adipisci velit iste explicabo nisi consequuntur amet odio nemo ratione asperiores id dolor, a porro quisquam ullam vero aliquam. Voluptatibus vel doloribus quam esse explicabo fugit architecto veritatis recusandae, ipsa delectus consequuntur dicta quas optio molestias quibusdam, similique sed accusamus! Ab iusto optio exercitationem officiis perspiciatis porro recusandae velit. Hic aliquid, perspiciatis suscipit saepe dicta repudiandae quaerat similique totam pariatur, fugiat illo dolor! Dolorum, magni nam quaerat tempore temporibus vel praesentium, veritatis, quasi harum dicta dolore cupiditate eveniet? Molestiae optio, consectetur iusto quo ipsum aspernatur illo? Sequi, amet. Provident numquam corporis consequatur, quibusdam consectetur tempora deserunt autem, sit minima, atque fuga dolor. Maiores ipsam esse dolor eius dolores quis. Consequuntur repudiandae soluta incidunt deleniti ex pariatur. Pariatur veniam distinctio maxime illo, amet ad tempore iusto mollitia autem nostrum inventore eius, aut, odio est laudantium assumenda? Quasi mollitia doloribus ea, magni dicta similique atque placeat minus?
+          {/* Lorem ipsum dolor sit amet consectetur adipisicing elit. Laboriosam animi fuga, fugit sequi dignissimos dolor commodi cupiditate cumque nihil maxime pariatur at quasi iusto blanditiis amet mollitia accusamus alias suscipit tenetur unde consequuntur itaque quaerat repellat vitae! Repudiandae, quaerat sit. Eaque repudiandae amet porro eligendi beatae vel enim eum fugiat tempora quia magnam consequatur nam dolorem facilis sapiente inventore deleniti necessitatibus error, vitae nostrum? Alias, dolorum.Lorem ipsum dolor sit amet consectetur adipisicing elit. Dolor labore itaque inventore excepturi ut voluptatum delectus nulla beatae sequi consequuntur error doloremque modi repudiandae ducimus dolore nam quas autem eius harum omnis, ullam corrupti molestiae quae incidunt? Eaque libero distinctio consequatur delectus quibusdam adipisci expedita nihil officiis quia qui, quidem id veritatis! Eaque minima recusandae adipisci velit iste explicabo nisi consequuntur amet odio nemo ratione asperiores id dolor, a porro quisquam ullam vero aliquam. Voluptatibus vel doloribus quam esse explicabo fugit architecto veritatis recusandae, ipsa delectus consequuntur dicta quas optio molestias quibusdam, similique sed accusamus! Ab iusto optio exercitationem officiis perspiciatis porro recusandae velit. Hic aliquid, perspiciatis suscipit saepe dicta repudiandae quaerat similique totam pariatur, fugiat illo dolor! Dolorum, magni nam quaerat tempore temporibus vel praesentium, veritatis, quasi harum dicta dolore cupiditate eveniet? Molestiae optio, consectetur iusto quo ipsum aspernatur illo? Sequi, amet. Provident numquam corporis consequatur, quibusdam consectetur tempora deserunt autem, sit minima, atque fuga dolor. Maiores ipsam esse dolor eius dolores quis. Consequuntur repudiandae soluta incidunt deleniti ex pariatur. Pariatur veniam distinctio maxime illo, amet ad tempore iusto mollitia autem nostrum inventore eius, aut, odio est laudantium assumenda? Quasi mollitia doloribus ea, magni dicta similique atque placeat minus? */}
         </Text>
       </ScrollView>
     </View>

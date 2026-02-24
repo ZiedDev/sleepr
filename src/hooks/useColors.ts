@@ -1,44 +1,77 @@
-import { useEffect } from 'react';
-import { useDerivedValue, interpolateColor, interpolate, withTiming, Easing, SharedValue } from 'react-native-reanimated';
+import { useDerivedValue, interpolateColor, interpolate, withTiming, Easing, makeMutable } from 'react-native-reanimated';
 import { DateTime } from 'luxon';
-import { fromEpochSec, SunLogic, toEpochSec } from '../db/logic';
+import { SunLogic } from '../db/logic';
 import useLocation from '../hooks/useLocation';
 import { backgroundColorLUT as LUT } from '../constants/colors';
-import { Platform } from 'react-native';
+import { create } from 'zustand';
+
+interface ColorState {
+    progress: { value: number }; // 0 -> 1
+    blur: { value: number };
+    initialize: () => Promise<boolean>;
+    setProgress: (value: number, animated?: boolean) => void;
+    setProgressByTime: (time: DateTime, animated?: boolean) => Promise<void>;
+    setBlur: (amount: number, animated?: boolean) => void;
+    refresh: () => Promise<void>;
+}
 
 const updateInterval = 60000; // 60*1000 (ms in 1 minute)
+let intervalId: NodeJS.Timeout | null = null;
 
-export const getProgress = (hour?: number) => {
-    let now = DateTime.local();
-    if (hour !== undefined) now = now.set({ hour });
-    // const { location } = useLocation();
-    // const sunData = SunLogic.request({
-    //     date: now,
-    //     lat: location?.coords.latitude,
-    //     lon: location?.coords.longitude
-    // });
-    const sunData = {
-        sunrise: toEpochSec(DateTime.now().set({ hour: 4, minute: 36 }))!,
-        daylength: 40527,
-    };
+const calculateProgress = async (time: DateTime) => {
+    const location = useLocation.getState().location;
+    if (!location) return 0;
 
-    const secondsSinceSunrise = now.diff(DateTime.fromSeconds(sunData.sunrise), 'seconds').seconds;
+    const sunData = await SunLogic.request({
+        date: time,
+        lat: location.coords.latitude,
+        lon: location.coords.longitude
+    });
+
+    const secondsSinceSunrise = time.diff(DateTime.fromSeconds(sunData.sunrise), 'seconds').seconds;
     return secondsSinceSunrise / sunData.daylength;
 };
 
-export const useBackgroundColors = (progress: SharedValue<number>) => {
-    useEffect(() => {
-        const update = () => {
-            progress.value = withTiming(getProgress(), {
-                duration: 1000,
-                easing: Easing.linear,
-            });
-        };
+const useColorStore = create<ColorState>((set, get) => {
+    const progress = makeMutable(0);
+    const blur = makeMutable(0);
+    return {
+        progress,
+        blur,
 
-        update();
-        const interval = setInterval(update, updateInterval);
-        return () => clearInterval(interval);
-    }, [progress]);
+        initialize: async () => {
+            const p = await calculateProgress(DateTime.now());
+            if (isNaN(p)) return false;
+            get().setProgress(p);
+            if (intervalId) clearInterval(intervalId);
+            intervalId = setInterval(() => get().refresh(), updateInterval);
+            return true;
+        },
+
+        setProgress: (val, animated = true) => {
+            progress.value = animated ?
+                withTiming(val, { duration: 1000, easing: Easing.linear }) : val;
+        },
+
+        setBlur: (amount, animated = true) => {
+            blur.value = animated ?
+                withTiming(amount, { duration: 500, easing: Easing.linear }) : amount;
+        },
+
+        setProgressByTime: async (time, animated = true) => {
+            const p = await calculateProgress(time);
+            get().setProgress(p, animated);
+        },
+
+        refresh: async () => { await get().setProgressByTime(DateTime.now()); }
+    }
+});
+
+export default useColorStore;
+
+export const useBackgroundColors = () => {
+    const progress = useColorStore(state => state.progress);
+    const blur = useColorStore(state => state.blur);
 
     return useDerivedValue(() => {
         const t = progress.value;
@@ -48,8 +81,7 @@ export const useBackgroundColors = (progress: SharedValue<number>) => {
         const getVal = (arr: number[]) => interpolate(t, s, arr);
 
         return {
-            blur: Platform.OS == "android" ? 15 : 0,
-
+            blur: blur.value,
             // SKY
             sky1: getCol(LUT.sky1),
             sky2: getCol(LUT.sky2),

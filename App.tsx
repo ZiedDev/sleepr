@@ -6,21 +6,26 @@ import SettingsScreen from "./src/screens/SettingsScreen";
 import StatsScreen from "./src/screens/StatsScreen";
 import BackgroundScreen from "./src/screens/BackgroundScreen";
 import { useSharedValue } from "react-native-reanimated";
-import { getProgress } from "./src/hooks/useColors";
 import { SkiaProvider } from "./SkiaProvider";
 import useLocation from "./src/hooks/useLocation";
+import useColorStore from "./src/hooks/useColors";
+import { initDB } from "./src/db/logic";
 
 export default function App() {
   const [navState, setNavState] = useState<"Home" | "Statistics" | "Settings">('Home');
 
-  const solarProgress = useSharedValue(getProgress());
 
   useEffect(() => {
-        useLocation.getState().initialize();
-    }, []);
+    const setup = async () => {
+      await initDB();
+      await useLocation.getState().initialize();
+      if (useLocation.getState().location) await useColorStore.getState().initialize();
+    };
+    setup();
+  }, []);
 
   const page = {
-    "Home": <HomeScreen solarProgress={solarProgress} />,
+    "Home": <HomeScreen />,
     "Statistics": <StatsScreen />,
     "Settings": <SettingsScreen />
   }
@@ -28,7 +33,7 @@ export default function App() {
   return (
     <>
       <SkiaProvider>
-        <BackgroundScreen solarProgress={solarProgress} />
+        <BackgroundScreen />
         <View style={styles.margins}>
           {page[navState]}
           <NavBar navState={navState} setNavState={setNavState} />
