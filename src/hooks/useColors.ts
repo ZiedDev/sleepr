@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useDerivedValue, interpolateColor, interpolate, withTiming, Easing, SharedValue } from 'react-native-reanimated';
 import { DateTime } from 'luxon';
 import { fromEpochSec, SunLogic, toEpochSec } from '../db/logic';
-import { useLocation } from '../hooks/useLocation';
+import useLocation from '../hooks/useLocation';
 import { backgroundColorLUT as LUT } from '../constants/colors';
 
 const updateInterval = 60000; // 60*1000 (ms in 1 minute)
@@ -50,6 +50,8 @@ export const useBackgroundColors = (progress: SharedValue<number>) => {
             // SKY
             sky1: getCol(LUT.sky1),
             sky2: getCol(LUT.sky2),
+            skyPosX: getVal(LUT.skyPosX),
+            skyPosY: getVal(LUT.skyPosY),
 
             // WATER
             waterRipple: getCol(LUT.waterRipple),
@@ -80,11 +82,15 @@ export const useBackgroundColors = (progress: SharedValue<number>) => {
             sun2: getCol(LUT.sun2),
             sunOpacity: getVal(LUT.sunOpacity),
             sunGlow: getCol(LUT.sunGlow),
+            sunPosX: getVal(LUT.sunPosX),
+            sunPosY: getVal(LUT.sunPosY),
 
             // MOON
             moon: getCol(LUT.moon),
             moonOpacity: getVal(LUT.moonOpacity),
             moonGlow: getCol(LUT.moonGlow),
+            moonPosX: getVal(LUT.moonPosX),
+            moonPosY: getVal(LUT.moonPosY),
 
             // CLOUDS
             clouds1: getCol(LUT.clouds1),
