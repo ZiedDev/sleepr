@@ -114,8 +114,17 @@ export const db: Database = {
 
   async getSun(date, lat, lon) {
     const compositeId = `${date}_${lat}_${lon}`;
-    if (_activeTx) return (await _activeTx.objectStore(SUN_STORE).get(compositeId)) ?? null;
-    return (await _db.get(SUN_STORE, compositeId)) ?? null;
+    let result: SunTimesRecord & { compositeId: string } | null;
+
+    if (_activeTx) {
+      result = await _activeTx.objectStore(SUN_STORE).get(compositeId) ?? null;
+    } else {
+      result = await _db.get(SUN_STORE, compositeId) ?? null;
+    }
+
+    if (!result) return null;
+    const { compositeId: _, ...sunTimes } = result;
+    return sunTimes;
   },
 
   async listSun(lat, lon, start, end) {

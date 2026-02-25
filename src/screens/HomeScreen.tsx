@@ -2,27 +2,31 @@ import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, ActivityIndicator, TouchableOpacity, Switch } from 'react-native';
 import useLocation from '../hooks/useLocation';
-import { initDB, SleepLogic, toISODate, DataLogic } from '../db/logic';
+import { SleepLogic, toISODate, DataLogic, SunLogic } from '../db/logic';
 import { useStorage } from '../db/storage';
 import * as Haptics from 'expo-haptics';
-import { SharedValue, useAnimatedReaction, withTiming, Easing } from 'react-native-reanimated';
 import { DateTime } from 'luxon';
 import Slider from '@react-native-community/slider';
-import { getProgress } from '../hooks/useColors';
+import useColorStore from '../hooks/useColors';
+import { useAnimatedReaction } from 'react-native-reanimated';
 import { runOnJS } from 'react-native-worklets';
 
-export default function HomeScreen({ solarProgress }: { solarProgress: SharedValue<number> }) {
-  const [dbReady, setDbReady] = useState(false);
-  const { location, errorMsg, loading: locationLoading, refresh: refreshLocation } = useLocation();
+export default function HomeScreen() {
+  const { location, errorMsg, loading: locationLoading } = useLocation();
+  const { progress, setProgressByTime, setBlur } = useColorStore();
   const [isHide, setHide] = useState(false);
   const [sliderValue, setSliderValue] = useState<number>(
-    DateTime.now().diff(DateTime.now().startOf('day'),'hours').hours
+    DateTime.now().diff(DateTime.now().startOf('day'), 'hours').hours
   );
+
+  useEffect(() => {
+    setBlur(0);
+  }, []);
 
   const [displayProgress, setDisplayProgress] = useState(0);
 
   useAnimatedReaction(
-    () => solarProgress.value,
+    () => progress.value,
     (val) => {
       runOnJS(setDisplayProgress)(val);
     }
@@ -30,19 +34,6 @@ export default function HomeScreen({ solarProgress }: { solarProgress: SharedVal
 
   const currentSession = useStorage((state) => state.currentSession);
   const isTracking = !!currentSession;
-
-  const isLoading = !dbReady || locationLoading;
-
-  useEffect(() => {
-    (async () => {
-      try {
-        await initDB();
-        setDbReady(true);
-      } catch (e) {
-        console.error("[HomeScreen] Database init failed", e);
-      }
-    })();
-  }, []);
 
   const handleToggleTracking = async () => {
     Haptics.selectionAsync();
@@ -74,13 +65,6 @@ export default function HomeScreen({ solarProgress }: { solarProgress: SharedVal
       />
 
       {!isHide ? (<>
-        <Text style={styles.text}>Database status:</Text>
-        {dbReady ? (
-          <Text style={styles.validText}>initialized</Text>
-        ) : (
-          <ActivityIndicator size="large" color={styles.indicator.color} />
-        )}
-
         <Text style={[styles.text, { marginTop: 20 }]}>Location:</Text>
         {locationLoading ? (
           <ActivityIndicator size="large" color={styles.indicator.color} />
@@ -96,9 +80,9 @@ export default function HomeScreen({ solarProgress }: { solarProgress: SharedVal
           <TouchableOpacity
             style={[styles.button, isTracking ? styles.stopButton : styles.startButton]}
             onPress={handleToggleTracking}
-            disabled={isLoading}
+            disabled={locationLoading}
           >
-            {isLoading ? (
+            {locationLoading ? (
               <ActivityIndicator color="#fff" />
             ) : (
               <Text style={styles.buttonText}>
@@ -116,9 +100,29 @@ export default function HomeScreen({ solarProgress }: { solarProgress: SharedVal
 
         <TouchableOpacity
           style={[styles.button, styles.startButton, { marginTop: 20 }]}
-          onPress={() => { refreshLocation(); Haptics.selectionAsync(); }}
+          onPress={async () => {
+            if (location) {
+              const l = await SunLogic.request({
+                date: DateTime.now().plus({ day: 1 }).toISO(),
+                lat: location.coords.latitude,
+                lon: location.coords.longitude
+              })
+              console.log(l)
+            }
+            Haptics.selectionAsync();
+          }}
         >
-          <Text style={styles.buttonText}>REFRESH</Text>
+          <Text style={styles.buttonText}>TEST</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.button, styles.startButton, { marginTop: 20 }]}
+          onPress={async () => {
+            await DataLogic.clearAll();
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)
+          }}
+        >
+          <Text style={styles.buttonText}>CLEAR</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -136,7 +140,7 @@ export default function HomeScreen({ solarProgress }: { solarProgress: SharedVal
         </TouchableOpacity>
 
       </>) : (<>
-        <Text style={{ margin: 'auto' }}>{displayProgress}, {sliderValue}, {getProgress(sliderValue)}</Text>
+        <Text style={[{ margin: 'auto' }, styles.text]}>{sliderValue}, {displayProgress}</Text>
         <Slider
           style={{ width: '70%', height: 40, margin: 'auto' }}
           minimumValue={0}
@@ -144,10 +148,7 @@ export default function HomeScreen({ solarProgress }: { solarProgress: SharedVal
           value={sliderValue}
           onValueChange={(value) => {
             setSliderValue(value);
-            solarProgress.value = withTiming(getProgress(value), {
-              duration: 1000,
-              easing: Easing.linear,
-            });
+            setProgressByTime(DateTime.now().set({ hour: value }));
           }}
         />
       </>)}
