@@ -1,9 +1,10 @@
 import { useDerivedValue, interpolateColor, interpolate, withTiming, Easing, makeMutable } from 'react-native-reanimated';
 import { DateTime } from 'luxon';
-import { SunLogic } from '../db/logic';
+import { SunLogic, toISODate } from '../db/logic';
 import useLocation from '../hooks/useLocation';
 import { backgroundColorLUT as LUT } from '../constants/colors';
 import { create } from 'zustand';
+import { useStorage } from '../db/storage';
 
 interface ColorState {
     progress: { value: number }; // 0 -> 1
@@ -18,15 +19,36 @@ interface ColorState {
 const updateInterval = 60000; // 60*1000 (ms in 1 minute)
 let intervalId: NodeJS.Timeout | null = null;
 
-const calculateProgress = async (time: DateTime) => {
+const getSunData = async (time: DateTime) => {
     const location = useLocation.getState().location;
-    if (!location) return 0;
+    if (!location) return null;
+
+    const { sunCache, setSunCache } = useStorage.getState();
+
+    const date = toISODate(time);
+    const lat = location.coords.latitude;
+    const lon = location.coords.longitude;
+
+    if (
+        sunCache &&
+        sunCache.date === date &&
+        sunCache.lat === lat &&
+        sunCache.lon === lon
+    ) return sunCache;
 
     const sunData = await SunLogic.request({
         date: time,
-        lat: location.coords.latitude,
-        lon: location.coords.longitude
+        lat,
+        lon,
     });
+    setSunCache(sunData);
+
+    return sunData;
+};
+
+const calculateProgress = async (time: DateTime) => {
+    const sunData = await getSunData(time);
+    if (!sunData) return 0;
 
     const secondsSinceSunrise = time.diff(DateTime.fromSeconds(sunData.sunrise), 'seconds').seconds;
     return secondsSinceSunrise / sunData.daylength;
