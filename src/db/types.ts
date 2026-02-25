@@ -22,6 +22,7 @@ export interface SunTimesRecord {
     lon: Coordinate;
     sunrise: EpochSec;
     sunset: EpochSec;
+    daylength: number
     updatedAt?: EpochSec;
 }
 

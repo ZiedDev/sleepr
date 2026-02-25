@@ -46,6 +46,7 @@ export const db: Database = {
             date TEXT NOT NULL,
             sunrise INTEGER NOT NULL,
             sunset INTEGER NOT NULL,
+            daylength INTEGER NOT NULL,
             updatedAt INTEGER,
             PRIMARY KEY (lat, lon, date)
         );
@@ -53,6 +54,8 @@ export const db: Database = {
         CREATE INDEX IF NOT EXISTS idx_sleep_end_start ON sleepSessions("end", start);
   `);
   },
+
+  // Sleep Sessions
 
   async upsertSleep(r) {
     await _db.runAsync(
@@ -93,12 +96,14 @@ export const db: Database = {
     );
   },
 
+  // Sun Times
+
   async upsertSun(r) {
     await _db.runAsync(
       `INSERT OR REPLACE INTO sunTimes 
-      (date, lat, lon, sunrise, sunset, updatedAt) 
-      VALUES (?, ?, ?, ?, ?, ?)`,
-      [r.date, r.lat, r.lon, r.sunrise, r.sunset, r.updatedAt ?? null]
+      (date, lat, lon, sunrise, sunset, daylength, updatedAt) 
+      VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [r.date, r.lat, r.lon, r.sunrise, r.sunset, r.daylength, r.updatedAt ?? null]
     );
   },
 
@@ -123,6 +128,8 @@ export const db: Database = {
       `SELECT * FROM sunTimes`
     );
   },
+
+  // Transactions / Maintenance
 
   async runTransaction(action) {
     await _db.execAsync('BEGIN TRANSACTION');

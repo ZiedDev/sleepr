@@ -251,12 +251,13 @@ export const SleepLogic = {
 };
 
 export const SunLogic = {
-  async put({ date, lat, lon, sunrise, sunset }: {
+  async put({ date, lat, lon, sunrise, sunset, daylength }: {
     date: Timestamp,
     lat: number,
     lon: number,
     sunrise: Timestamp,
     sunset: Timestamp,
+    daylength: number,
   }): Promise<SunTimesRecord> {
     const sunriseEpoch = toEpochSec(sunrise);
     const sunsetEpoch = toEpochSec(sunset);
@@ -280,6 +281,7 @@ export const SunLogic = {
       lon: lonCoordinate,
       sunrise: sunriseEpoch,
       sunset: sunsetEpoch,
+      daylength,
       updatedAt: nowEpoch,
     };
 
@@ -356,8 +358,9 @@ export const SunLogic = {
       date,
       lat,
       lon,
-      sunrise: data.results.sunrise,
-      sunset: data.results.sunset
+      sunrise: toEpochSec(data.results.sunrise)!,
+      sunset: toEpochSec(data.results.sunset)!,
+      daylength: data.results.day_length,
     });
   },
 
@@ -581,6 +584,8 @@ export const StatsLogic = {
 };
 
 export const DataLogic = {
+  clearAll: db.clearAll,
+
   async exportToObject(): Promise<ExportData> {
     const [sleep, sun] = await Promise.all([
       db.getAllSleep(),

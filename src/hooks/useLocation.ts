@@ -35,8 +35,11 @@ const useLocation = create<LocationState>((set, get) => ({
 
     initialize: async () => {
         try {
-            let { status } = await Location.requestForegroundPermissionsAsync();
-            if (status !== 'granted') {
+            let currentStatus = (await Location.getForegroundPermissionsAsync()).status;
+            if (currentStatus === 'undetermined') {
+                currentStatus = (await Location.requestForegroundPermissionsAsync()).status;
+            }
+            if (currentStatus !== 'granted') {
                 set({ location: null, errorMsg: 'Permission denied', loading: false });
                 return;
             }
