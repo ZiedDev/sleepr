@@ -1,105 +1,48 @@
-import React from 'react';
-import { View, Text, StyleSheet, Switch, TouchableOpacity, Button } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import React, { useEffect, useState } from 'react';
+import { View, StyleSheet, Platform, Dimensions, Text } from 'react-native';
+import ClockSlider from '../components/ClockSlider';
+import useColorStore from '../hooks/useColors';
+import Svg, { Path } from 'react-native-svg';
+import { DateTime } from 'luxon';
+import { interpolate } from 'react-native-reanimated';
+
+const getStrFromRad = (startAngle: number, endAngle: number) => {
+  const hourStart = interpolate(startAngle, [0, 2 * Math.PI], [6, 30]) % 24;
+  const hourEnd = interpolate(endAngle, [0, 2 * Math.PI], [6, 30]) % 24;
+  const startStr = DateTime.now().startOf('day').plus({ hour: hourStart }).toFormat("h:mm a");
+  const endStr = DateTime.now().startOf('day').plus({ hour: hourEnd }).toFormat("h:mm a");
+  return `${startStr} -> ${endStr}`;
+}
 
 export default function SettingsScreen() {
-  const [isNotificationsEnabled, setIsNotificationsEnabled] = React.useState(true);
+  const [clock, setClock] = useState(getStrFromRad(Math.PI * 1.5, Math.PI * 0.5));
+
+  if (['android', 'web'].includes(Platform.OS)) {
+    useEffect(() => {
+      useColorStore.getState().setBlur(15);
+    }, []);
+  }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Settings</Text>
+      <Text style={{ fontSize: 35 }}>{clock}</Text >
+      <ClockSlider
+        size={Dimensions.get('window').width * 0.5}
+        onValueChange={(s, e) => setClock(getStrFromRad(s, e))}
 
-      <View style={styles.section}>
-        <View style={styles.settingRow}>
-          <Text style={styles.settingLabel}>Sleep Notifications</Text>
-          <Switch
-            value={isNotificationsEnabled}
-            onValueChange={setIsNotificationsEnabled}
-            trackColor={{ false: "#333", true: "#109dc9" }}
-          />
-        </View>
+        step = {(2 * Math.PI) / (24 * 60) * 60}
 
-        <TouchableOpacity style={styles.settingRow}>
-          <Text style={styles.settingLabel}>Export Sleep Data (CSV)</Text>
-          <Text style={styles.arrow}>→</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.settingRow}>
-          <Text style={styles.settingLabel}>Privacy Policy</Text>
-          <Text style={styles.arrow}>→</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.grid}>
-        <View style={[styles.section, {flex: 1}]}>
-        <Button
-          title="Success"
-          onPress={
-            () =>
-              Haptics.notificationAsync(
-                Haptics.NotificationFeedbackType.Success
-              )
-          }
-        />
-        <Button
-          title="Error"
-          onPress={
-            () =>
-              Haptics.notificationAsync(
-                Haptics.NotificationFeedbackType.Error
-              )
-          }
-        />
-        <Button
-          title="Warning"
-          onPress={
-            () =>
-              Haptics.notificationAsync(
-                Haptics.NotificationFeedbackType.Warning
-              )
-          }
-        />
-      </View>
-
-      <View style={[styles.section, {flex: 1}]}>
-        <Button
-          title="Light"
-          onPress={
-            () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-          }
-        />
-        <Button
-          title="Medium"
-          onPress={
-            () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
-          }
-        />
-        <Button
-          title="Heavy"
-          onPress={
-            () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)
-          }
-        />
-        <Button
-          title="Rigid"
-          onPress={
-            () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Rigid)
-          }
-        />
-        <Button
-          title="Soft"
-          onPress={
-            () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Soft)
-          }
-        />
-      </View>
-
-      <View style={[styles.section, {flex: 1}]}>
-        <Button title="Selection" onPress={() => Haptics.selectionAsync()} />
-      </View>
-      </View>
-
-      <Text style={styles.version}>Version 1.0.0</Text>
+        startIcon={
+          <Svg width={25} height={25} viewBox="0 0 24 24">
+            <Path fill="#812812" d="M7 12.5a3 3 0 1 0-3-3a3 3 0 0 0 3 3m0-4a1 1 0 1 1-1 1a1 1 0 0 1 1-1m13-2h-8a1 1 0 0 0-1 1v6H3v-8a1 1 0 0 0-2 0v13a1 1 0 0 0 2 0v-3h18v3a1 1 0 0 0 2 0v-9a3 3 0 0 0-3-3m1 7h-8v-5h7a1 1 0 0 1 1 1Z" />
+          </Svg>
+        }
+        endIcon={
+          <Svg width={25} height={25} viewBox="0 0 24 24">
+            <Path fill="#812812" d="M12 22q-1.875 0-3.512-.712t-2.85-1.925t-1.925-2.85T3 13t.713-3.512t1.924-2.85t2.85-1.925T12 4t3.513.713t2.85 1.925t1.925 2.85T21 13t-.712 3.513t-1.925 2.85t-2.85 1.925T12 22m2.8-4.8l1.4-1.4l-3.2-3.2V8h-2v5.4zM5.6 2.35L7 3.75L2.75 8l-1.4-1.4zm12.8 0l4.25 4.25l-1.4 1.4L17 3.75z" />
+          </Svg>
+        }
+      />
     </View>
   );
 }
@@ -107,50 +50,8 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
-    paddingTop: 60,
-    backgroundColor: '#0f0f0f'
-  },
-  title: {
-    fontSize: 28,
-    color: 'white',
-    fontWeight: 'bold',
-    marginBottom: 30
-  },
-  section: {
-    backgroundColor: '#1a1a1a',
-    borderRadius: 15,
-    overflow: 'hidden',
-    marginBottom: 15,
-  },
-  settingRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 18,
-    borderBottomWidth: 1,
-    borderBottomColor: '#262626'
-  },
-  settingLabel: {
-    color: 'white',
-    fontSize: 16
-  },
-  arrow: {
-    color: '#555',
-    fontSize: 18
-  },
-  version: {
-    color: '#444',
-    textAlign: 'center',
-    marginTop: 20,
-    fontSize: 12
-  },
-  grid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignContent: 'center'
-  },
-  hapticButton: {
-    flex: 1,
+    justifyContent: 'center',
+    padding: 10,
   },
 });
