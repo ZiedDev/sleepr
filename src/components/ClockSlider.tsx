@@ -19,62 +19,38 @@ export default function ClockSlider({ mode, onValueChange }: {
     mode: 'range' | 'single' | 'locked';
     onValueChange?: (start: number, end?: number) => void;
 }) {
-    const translationX = useSharedValue(CENTER);
-    const translationY = useSharedValue(CENTER);
-    const prevTranslationX = useSharedValue(0);
-    const prevTranslationY = useSharedValue(0);
+    // rad 0 -> 2*PI clockwise from positive x-axis
+    const startAngle = useSharedValue(Math.PI * 1.5);
+    const endAngle = useSharedValue(Math.PI * 0.5);
+
+    const handleUpdate = (s: number, e: number) => {
+        'worklet';
+        if (onValueChange) scheduleOnRN(() => onValueChange(s, e));
+        scheduleOnRN(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light));
+    };
 
     const pan = Gesture.Pan()
-        .onStart(() => {
-            prevTranslationX.value = translationX.value;
-            prevTranslationY.value = translationY.value;
-        })
         .onUpdate((event) => {
-            const maxTranslateX = width / 2 * 0.7;
-            const maxTranslateY = height / 2 * 0.6;
-
-            translationX.value = Math.min(
-                Math.max(prevTranslationX.value + event.translationX, -maxTranslateX),
-                maxTranslateX
-            );
-
-            translationY.value = Math.min(
-                Math.max(prevTranslationY.value + event.translationY, -maxTranslateY),
-                maxTranslateY
-            );
+            const x = event.x - CENTER;
+            const y = event.y - CENTER;
+            let angle = Math.atan2(y, x);
+            startAngle.value = angle;
+            console.log(angle)
         })
-        .onEnd(() => {
-            translationX.value = withSpring(CENTER, {
-                damping: 10,
-                stiffness: 120,
-                mass: 1,
-                overshootClamping: false,
-            });
-            translationY.value = withSpring(CENTER, {
-                damping: 10,
-                stiffness: 120,
-                mass: 1,
-                overshootClamping: false,
-            });
-            prevTranslationX.value = translationX.value;
-            prevTranslationY.value = translationY.value;
-        });
 
     const animatedProps = useAnimatedProps(() => ({
-        cx: translationX.value,
-        cy: translationY.value,
+        cx: CENTER + RADIUS * Math.cos(startAngle.value),
+        cy: CENTER + RADIUS * Math.sin(startAngle.value),
     }));
 
     return (
         <GestureDetector gesture={pan}>
             <View style={{ width: SIZE, height: SIZE }}>
                 <Svg width={SIZE} height={SIZE}>
+                    <Circle cx={CENTER} cy={CENTER} r={RADIUS} stroke="#222" strokeWidth={30} fill="none" />
                     <AnimatedCircle
                         animatedProps={animatedProps}
-                        r={RADIUS}
-                        stroke="#222"
-                        strokeWidth={30}
-                        fill="none"
+                        r={15} fill="white"
                     />
                 </Svg>
             </View>
