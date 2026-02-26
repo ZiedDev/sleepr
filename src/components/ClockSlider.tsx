@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Dimensions } from 'react-native';
 import Svg, { Circle, Path, G } from 'react-native-svg';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
-import Animated, { useAnimatedProps, useSharedValue, SharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
+import Animated, { useAnimatedProps, useSharedValue, SharedValue, useAnimatedStyle, withTiming, Easing, withSpring } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { scheduleOnRN } from 'react-native-worklets';
 
@@ -37,8 +37,8 @@ export default function ClockSlider({ mode, onValueChange }: {
             prevTranslationY.value = translationY.value;
         })
         .onUpdate((event) => {
-            const maxTranslateX = width / 2 * 0.5;
-            const maxTranslateY = height / 2 * 0.5;
+            const maxTranslateX = width / 2 * 0.7;
+            const maxTranslateY = height / 2 * 0.6;
 
             translationX.value = Math.min(
                 Math.max(prevTranslationX.value + event.translationX, -maxTranslateX),
@@ -50,6 +50,22 @@ export default function ClockSlider({ mode, onValueChange }: {
                 maxTranslateY
             );
         })
+        .onEnd(() => {
+            translationX.value = withSpring(0, {
+                damping: 10,
+                stiffness: 120,
+                mass: 1,
+                overshootClamping: false,
+            });
+            translationY.value = withSpring(0, {
+                damping: 10,
+                stiffness: 120,
+                mass: 1,
+                overshootClamping: false,
+            });
+            prevTranslationX.value = translationX.value;
+            prevTranslationY.value = translationY.value;
+        });
 
     return (
         <GestureDetector gesture={pan}>
