@@ -39,6 +39,13 @@ export default function ClockSlider({ mode, onValueChange }: {
         return { x: CENTER + RADIUS * Math.cos(angle), y: CENTER + RADIUS * Math.sin(angle) };
     };
 
+    const angleDiff = (angle1: number, angle2: number) => {
+        'worklet';
+        let diff = angle2 - angle1;
+        diff = (diff + 2 * Math.PI) % (2 * Math.PI)
+        return (diff < 1e-10 || Math.abs(diff - 2 * Math.PI) < 1e-10) ? 0 : diff;
+    };
+
     const pan = Gesture.Pan()
         .enabled(mode !== 'locked')
         .onStart((event) => {
@@ -67,13 +74,22 @@ export default function ClockSlider({ mode, onValueChange }: {
 
             const quantizedAngle = Math.round(angle / STEP) * STEP;
 
-            if (activeKnob.value == 'start' && quantizedAngle !== startAngle.value) {
+
+            if (activeKnob.value == 'start' && quantizedAngle % (2 * Math.PI) !== startAngle.value % (2 * Math.PI)) {
+                const diff = angleDiff(quantizedAngle, endAngle.value);
+                const direction = angleDiff(startAngle.value, quantizedAngle) > Math.PI ? -1 : 1;
+
+                if (diff < MIN_DIFF) endAngle.value = quantizedAngle + direction * STEP;
+
                 startAngle.value = quantizedAngle;
-                // if (endAngle.value-startAngle.value<=MIN_DIFF) endAngle.value = quantizedAngle+STEP;
             }
-            if (activeKnob.value == 'end' && quantizedAngle !== endAngle.value) {
+            if (activeKnob.value == 'end' && quantizedAngle % (2 * Math.PI) !== endAngle.value % (2 * Math.PI)) {
+                const diff = angleDiff(quantizedAngle, startAngle.value);
+                const direction = angleDiff(endAngle.value, quantizedAngle) > Math.PI ? -1 : 1;
+
+                if (diff < MIN_DIFF) startAngle.value = quantizedAngle + direction * STEP;
+
                 endAngle.value = quantizedAngle;
-                // if (endAngle.value-startAngle.value<=MIN_DIFF) endAngle.value = quantizedAngle+STEP;
             }
             // if (quantizedAngle !== startAngle.value) {
             //     // console.log(angle, quantizedAngle);
@@ -99,9 +115,7 @@ export default function ClockSlider({ mode, onValueChange }: {
     const arcProps = useAnimatedProps(() => {
         const { x: startX, y: startY } = polarToXY(startAngle.value);
         const { x: endX, y: endY } = polarToXY(endAngle.value);
-
-        const diff = endAngle.value - startAngle.value;
-        const largeArc = (diff + 2 * Math.PI) % (2 * Math.PI) > Math.PI ? 1 : 0;
+        const largeArc = angleDiff(startAngle.value, endAngle.value) > Math.PI ? 1 : 0;
 
         return {
             d: mode === 'single' ? '' : `M ${startX} ${startY} A ${RADIUS} ${RADIUS} 0 ${largeArc} 1 ${endX} ${endY}`
