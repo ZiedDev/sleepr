@@ -10,6 +10,7 @@ import { SkiaProvider } from "./SkiaProvider";
 import useLocation from "./src/hooks/useLocation";
 import useColorStore from "./src/hooks/useColors";
 import { initDB } from "./src/db/logic";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 export default function App() {
   const [navState, setNavState] = useState<"Home" | "Statistics" | "Settings">('Home');
@@ -33,11 +34,13 @@ export default function App() {
   return (
     <>
       <SkiaProvider>
-        <BackgroundScreen />
-        <View style={styles.margins}>
-          {page[navState]}
-          <NavBar navState={navState} setNavState={setNavState} />
-        </View>
+        <GestureHandlerRootView>
+          <BackgroundScreen />
+          <View style={styles.margins}>
+            {page[navState]}
+            <NavBar navState={navState} setNavState={setNavState} />
+          </View>
+        </GestureHandlerRootView>
       </SkiaProvider>
     </>
   );
