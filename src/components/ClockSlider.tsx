@@ -3,7 +3,6 @@ import { StyleSheet, Dimensions, View } from 'react-native';
 import Svg, { Circle, Line, Path } from 'react-native-svg';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useAnimatedProps, useSharedValue, runOnJS, useAnimatedStyle } from 'react-native-reanimated';
-import PhMoonBold from '../../assets/svgs/PhMoonBold';
 import * as Haptics from 'expo-haptics';
 
 const { width, height } = Dimensions.get('window');
@@ -16,6 +15,7 @@ const TICK_LENGTH = 10;
 const STEP = (2 * Math.PI) / (12 * 60) * 30;// 30 minute increments
 const MIN_DIFF_FORWARD = 2 * STEP;
 const MIN_DIFF_BACKWARD = 4 * STEP;
+const ICON_SIZE = 25;
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -115,7 +115,13 @@ export default function ClockSlider({ mode, onValueChange }: {
 
     const startIconProps = useAnimatedStyle(() => {
         const { x, y } = polarToXY(startAngle.value);
-        return { transform: [{ translateX: x - 25 / 2 }, { translateY: y - 25 / 2 }] };
+        return {
+            position: 'absolute',
+            left: x - ICON_SIZE / 2,
+            top: y - ICON_SIZE / 2,
+            width: ICON_SIZE,
+            height: ICON_SIZE,
+        };
     });
 
     const endKnobProps = useAnimatedProps(() => {
@@ -124,8 +130,14 @@ export default function ClockSlider({ mode, onValueChange }: {
     });
 
     const endIconProps = useAnimatedStyle(() => {
-        const { x, y } = polarToXY(startAngle.value);
-        return { transform: [{ translateX: x }, { translateY: y }] };
+        const { x, y } = polarToXY(endAngle.value);
+        return {
+            position: 'absolute',
+            left: x - ICON_SIZE / 2,
+            top: y - ICON_SIZE / 2,
+            width: ICON_SIZE,
+            height: ICON_SIZE,
+        };
     });
 
     const arcProps = useAnimatedProps(() => {
@@ -151,15 +163,24 @@ export default function ClockSlider({ mode, onValueChange }: {
 
                     {/* Start Knob */}
                     <AnimatedCircle animatedProps={startKnobProps} r={HANDLE_RADIUS} fill="#ee872d" />
-                    <Animated.View style={startIconProps}>
-                        <Svg width={25} height={25} viewBox="0 0 256 256">
-                            <Path fill="#812812" d="M236.37 139.4a12 12 0 0 0-12-3A84.07 84.07 0 0 1 119.6 31.59a12 12 0 0 0-15-15a108.86 108.86 0 0 0-54.91 38.48A108 108 0 0 0 136 228a107.1 107.1 0 0 0 64.93-21.69a108.86 108.86 0 0 0 38.44-54.94a12 12 0 0 0-3-11.97m-49.88 47.74A84 84 0 0 1 68.86 69.51a84.9 84.9 0 0 1 23.41-21.22Q92 52.13 92 56a108.12 108.12 0 0 0 108 108q3.87 0 7.71-.27a84.8 84.8 0 0 1-21.22 23.41" />
-                        </Svg>
-                    </Animated.View>
 
                     {/* End Knob */}
                     <AnimatedCircle animatedProps={endKnobProps} r={HANDLE_RADIUS} fill="#ee872d" />
                 </Svg>
+
+                {/* Start Icon */}
+                <Animated.View style={startIconProps}>
+                    <Svg width={25} height={25} viewBox="0 0 24 24">
+                        <Path fill="#812812" d="M7 12.5a3 3 0 1 0-3-3a3 3 0 0 0 3 3m0-4a1 1 0 1 1-1 1a1 1 0 0 1 1-1m13-2h-8a1 1 0 0 0-1 1v6H3v-8a1 1 0 0 0-2 0v13a1 1 0 0 0 2 0v-3h18v3a1 1 0 0 0 2 0v-9a3 3 0 0 0-3-3m1 7h-8v-5h7a1 1 0 0 1 1 1Z" />
+                    </Svg>
+                </Animated.View>
+
+                {/* End Icon */}
+                <Animated.View style={endIconProps}>
+                    <Svg width={25} height={25} viewBox="0 0 256 256">
+                        <Path fill="#812812" d="M236.37 139.4a12 12 0 0 0-12-3A84.07 84.07 0 0 1 119.6 31.59a12 12 0 0 0-15-15a108.86 108.86 0 0 0-54.91 38.48A108 108 0 0 0 136 228a107.1 107.1 0 0 0 64.93-21.69a108.86 108.86 0 0 0 38.44-54.94a12 12 0 0 0-3-11.97m-49.88 47.74A84 84 0 0 1 68.86 69.51a84.9 84.9 0 0 1 23.41-21.22Q92 52.13 92 56a108.12 108.12 0 0 0 108 108q3.87 0 7.71-.27a84.8 84.8 0 0 1-21.22 23.41" />
+                    </Svg>
+                </Animated.View>
             </View>
         </GestureDetector>
     );
