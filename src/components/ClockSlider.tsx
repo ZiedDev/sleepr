@@ -13,7 +13,7 @@ interface ClockSliderProps {
     startAngle?: SharedValue<number>;
     endAngle?: SharedValue<number>;
     step?: number;
-    onValueChange?: (start: number, end?: number) => void;
+    onValueChange?: (start: number, end: number) => void;
 
     startIcon?: React.ReactNode;
     endIcon?: React.ReactNode;

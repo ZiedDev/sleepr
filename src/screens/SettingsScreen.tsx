@@ -1,10 +1,21 @@
-import React, { useEffect } from 'react';
-import { View, StyleSheet, Platform, Dimensions } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, StyleSheet, Platform, Dimensions, Text } from 'react-native';
 import ClockSlider from '../components/ClockSlider';
 import useColorStore from '../hooks/useColors';
 import Svg, { Path } from 'react-native-svg';
+import { DateTime } from 'luxon';
+import { interpolate } from 'react-native-reanimated';
+
+const getStrFromRad = (startAngle: number, endAngle: number) => {
+  const hourStart = interpolate(startAngle, [0, 2 * Math.PI], [6, 30]) % 24;
+  const hourEnd = interpolate(endAngle, [0, 2 * Math.PI], [6, 30]) % 24;
+  const startStr = DateTime.now().startOf('day').plus({ hour: hourStart }).toFormat("h:mm a");
+  const endStr = DateTime.now().startOf('day').plus({ hour: hourEnd }).toFormat("h:mm a");
+  return `${startStr} -> ${endStr}`;
+}
 
 export default function SettingsScreen() {
+  const [clock, setClock] = useState(getStrFromRad(Math.PI * 1.5, Math.PI * 0.5));
 
   if (['android', 'web'].includes(Platform.OS)) {
     useEffect(() => {
@@ -14,9 +25,12 @@ export default function SettingsScreen() {
 
   return (
     <View style={styles.container}>
+      <Text style={{ fontSize: 35 }}>{clock}</Text >
       <ClockSlider
         size={Dimensions.get('window').width * 0.5}
-        onValueChange={(s, e) => console.log(s, e)}
+        onValueChange={(s, e) => setClock(getStrFromRad(s, e))}
+
+        step = {(2 * Math.PI) / (24 * 60) * 60}
 
         startIcon={
           <Svg width={25} height={25} viewBox="0 0 24 24">
