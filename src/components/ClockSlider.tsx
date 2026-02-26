@@ -12,6 +12,8 @@ const RADIUS = SIZE / 2 - 20;
 const CENTER = SIZE / 2;
 const TOUCH_SLOP = 10;
 const HANDLE_RADIUS = 15;
+const STEP = (2 * Math.PI) / (24 * 60 / 120);// 30 minute increments
+const MIN_DIFF = STEP;
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -63,13 +65,16 @@ export default function ClockSlider({ mode, onValueChange }: {
             let angle = Math.atan2(y, x);
             if (angle < 0) angle += (2 * Math.PI);
 
-            const step = (2 * Math.PI) / (24 * 60 / 120);// 30 minute increments
-            const quantizedAngle = Math.round(angle / step) * step;
+            const quantizedAngle = Math.round(angle / STEP) * STEP;
 
-            // TODO: onStart if single
-
-            if (activeKnob.value == 'start' && quantizedAngle !== startAngle.value) startAngle.value = quantizedAngle;
-            if (activeKnob.value == 'end' && quantizedAngle !== endAngle.value) endAngle.value = quantizedAngle;
+            if (activeKnob.value == 'start' && quantizedAngle !== startAngle.value) {
+                startAngle.value = quantizedAngle;
+                // if (endAngle.value-startAngle.value<=MIN_DIFF) endAngle.value = quantizedAngle+STEP;
+            }
+            if (activeKnob.value == 'end' && quantizedAngle !== endAngle.value) {
+                endAngle.value = quantizedAngle;
+                // if (endAngle.value-startAngle.value<=MIN_DIFF) endAngle.value = quantizedAngle+STEP;
+            }
             // if (quantizedAngle !== startAngle.value) {
             //     // console.log(angle, quantizedAngle);
             //     startAngle.value = quantizedAngle;
@@ -91,29 +96,34 @@ export default function ClockSlider({ mode, onValueChange }: {
         return { cx: x, cy: y };
     });
 
-    const arcProps = useAnimatedProps(() => ({
+    const arcProps = useAnimatedProps(() => {
+        const { x: startX, y: startY } = polarToXY(startAngle.value);
+        const { x: endX, y: endY } = polarToXY(endAngle.value);
 
-    }));
+        const diff = endAngle.value - startAngle.value;
+        const largeArc = (diff + 2 * Math.PI) % (2 * Math.PI) > Math.PI ? 1 : 0;
+
+        return {
+            d: mode === 'single' ? '' : `M ${startX} ${startY} A ${RADIUS} ${RADIUS} 0 ${largeArc} 1 ${endX} ${endY}`
+        };
+    });
 
     return (
         <GestureDetector gesture={pan}>
             <View style={{ width: SIZE, height: SIZE }}>
                 <Svg width={SIZE} height={SIZE}>
-                    {/* Background Track */}
+                    {/* Track */}
                     <Circle cx={CENTER} cy={CENTER} r={RADIUS} stroke="#222" strokeWidth={30} fill="none" />
 
+                    {/* Arc */}
+                    <AnimatedPath animatedProps={arcProps} stroke="#FFD60A" strokeWidth={30} fill="none" />
+
                     {/* Start Knob */}
-                    <AnimatedCircle
-                        animatedProps={startKnobProps}
-                        r={HANDLE_RADIUS} fill="white"
-                    />
+                    <AnimatedCircle animatedProps={startKnobProps} r={HANDLE_RADIUS} fill="white" />
 
                     {/* End Knob */}
                     {mode === 'range' && (
-                        <AnimatedCircle
-                            animatedProps={endKnobProps}
-                            r={HANDLE_RADIUS} fill="#6f6f6f"
-                        />
+                        <AnimatedCircle animatedProps={endKnobProps} r={HANDLE_RADIUS} fill="#6f6f6f" />
                     )}
                 </Svg>
             </View>
