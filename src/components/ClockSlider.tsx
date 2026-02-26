@@ -1,8 +1,9 @@
 import React from 'react';
 import { StyleSheet, Dimensions, View } from 'react-native';
-import Svg, { Circle, Path } from 'react-native-svg';
+import Svg, { Circle, Line, Path } from 'react-native-svg';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { useAnimatedProps, useSharedValue, runOnJS } from 'react-native-reanimated';
+import Animated, { useAnimatedProps, useSharedValue, runOnJS, useAnimatedStyle } from 'react-native-reanimated';
+import PhMoonBold from '../../assets/svgs/PhMoonBold';
 import * as Haptics from 'expo-haptics';
 
 const { width, height } = Dimensions.get('window');
@@ -11,6 +12,7 @@ const RADIUS = SIZE / 2 - 20;
 const CENTER = SIZE / 2;
 const TOUCH_SLOP = 10;
 const HANDLE_RADIUS = 15;
+const TICK_LENGTH = 10;
 const STEP = (2 * Math.PI) / (12 * 60) * 30;// 30 minute increments
 const MIN_DIFF_FORWARD = 2 * STEP;
 const MIN_DIFF_BACKWARD = 4 * STEP;
@@ -111,9 +113,19 @@ export default function ClockSlider({ mode, onValueChange }: {
         return { cx: x, cy: y };
     });
 
+    const startIconProps = useAnimatedStyle(() => {
+        const { x, y } = polarToXY(startAngle.value);
+        return { transform: [{ translateX: x - 25 / 2 }, { translateY: y - 25 / 2 }] };
+    });
+
     const endKnobProps = useAnimatedProps(() => {
         const { x, y } = polarToXY(endAngle.value);
         return { cx: x, cy: y };
+    });
+
+    const endIconProps = useAnimatedStyle(() => {
+        const { x, y } = polarToXY(startAngle.value);
+        return { transform: [{ translateX: x }, { translateY: y }] };
     });
 
     const arcProps = useAnimatedProps(() => {
@@ -131,18 +143,57 @@ export default function ClockSlider({ mode, onValueChange }: {
                     {/* Track */}
                     <Circle cx={CENTER} cy={CENTER} r={RADIUS} stroke="#222" strokeWidth={30} fill="none" />
 
+                    {/* Ticks */}
+                    {renderTicks()}
+
                     {/* Arc */}
-                    <AnimatedPath animatedProps={arcProps} stroke="#FFD60A" strokeWidth={30} fill="none" />
+                    <AnimatedPath animatedProps={arcProps} stroke="#f19848" strokeWidth={30} fill="none" />
 
                     {/* Start Knob */}
-                    <AnimatedCircle animatedProps={startKnobProps} r={HANDLE_RADIUS} fill="white" />
+                    <AnimatedCircle animatedProps={startKnobProps} r={HANDLE_RADIUS} fill="#ee872d" />
+                    <Animated.View style={startIconProps}>
+                        <Svg width={25} height={25} viewBox="0 0 256 256">
+                            <Path fill="#812812" d="M236.37 139.4a12 12 0 0 0-12-3A84.07 84.07 0 0 1 119.6 31.59a12 12 0 0 0-15-15a108.86 108.86 0 0 0-54.91 38.48A108 108 0 0 0 136 228a107.1 107.1 0 0 0 64.93-21.69a108.86 108.86 0 0 0 38.44-54.94a12 12 0 0 0-3-11.97m-49.88 47.74A84 84 0 0 1 68.86 69.51a84.9 84.9 0 0 1 23.41-21.22Q92 52.13 92 56a108.12 108.12 0 0 0 108 108q3.87 0 7.71-.27a84.8 84.8 0 0 1-21.22 23.41" />
+                        </Svg>
+                    </Animated.View>
 
                     {/* End Knob */}
-                    <AnimatedCircle animatedProps={endKnobProps} r={HANDLE_RADIUS} fill="#6f6f6f" />
+                    <AnimatedCircle animatedProps={endKnobProps} r={HANDLE_RADIUS} fill="#ee872d" />
                 </Svg>
             </View>
         </GestureDetector>
     );
+};
+
+const renderTicks = () => {
+    const ticks = [];
+
+    for (let i = 0; i < Math.round((2 * Math.PI) / STEP); i++) {
+        const angle = i * STEP;
+
+        const outerRadius = RADIUS + TICK_LENGTH / 2;
+        const outerX = CENTER + outerRadius * Math.cos(angle);
+        const outerY = CENTER + outerRadius * Math.sin(angle);
+
+        const innerRadius = RADIUS - TICK_LENGTH / 2;
+        const innerX = CENTER + innerRadius * Math.cos(angle);
+        const innerY = CENTER + innerRadius * Math.sin(angle);
+
+        ticks.push(
+            <Line
+                key={`tick-${i}`}
+                x1={innerX}
+                y1={innerY}
+                x2={outerX}
+                y2={outerY}
+                stroke="#444"
+                strokeWidth={2}
+                strokeLinecap="round"
+            />
+        );
+    }
+
+    return ticks;
 };
 
 const styles = StyleSheet.create({
