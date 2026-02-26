@@ -1,10 +1,9 @@
 import React from 'react';
 import { StyleSheet, Dimensions, View } from 'react-native';
-import Svg, { Circle, Path, G } from 'react-native-svg';
-import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
-import Animated, { useAnimatedProps, useSharedValue, SharedValue, useAnimatedStyle, withTiming, Easing, withSpring } from 'react-native-reanimated';
+import Svg, { Circle, Path } from 'react-native-svg';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, { useAnimatedProps, useSharedValue, runOnJS } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { scheduleOnRN } from 'react-native-worklets';
 
 const { width, height } = Dimensions.get('window');
 const SIZE = width * 0.5;
@@ -12,7 +11,7 @@ const RADIUS = SIZE / 2 - 20;
 const CENTER = SIZE / 2;
 const TOUCH_SLOP = 10;
 const HANDLE_RADIUS = 15;
-const STEP = (2 * Math.PI) / (24 * 60 / 120);// 30 minute increments
+const STEP = (2 * Math.PI) / (12 * 60) * 30;// 30 minute increments
 const MIN_DIFF = STEP;
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
@@ -30,8 +29,8 @@ export default function ClockSlider({ mode, onValueChange }: {
 
     const handleUpdate = (s: number, e: number) => {
         'worklet';
-        if (onValueChange) scheduleOnRN(() => onValueChange(s, e));
-        scheduleOnRN(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light));
+        if (onValueChange) runOnJS(onValueChange)(s, e);
+        runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Light);
     };
 
     const polarToXY = (angle: number) => {
@@ -47,7 +46,6 @@ export default function ClockSlider({ mode, onValueChange }: {
     };
 
     const pan = Gesture.Pan()
-        .enabled(mode !== 'locked')
         .onStart((event) => {
             const x = event.x;
             const y = event.y;
@@ -58,12 +56,10 @@ export default function ClockSlider({ mode, onValueChange }: {
                 return;
             }
 
-            if (mode === 'range') {
-                const { x: endX, y: endY } = polarToXY(endAngle.value);
-                if (Math.hypot(event.x - endX, y - endY) < HANDLE_RADIUS + TOUCH_SLOP) {
-                    activeKnob.value = 'end';
-                    return;
-                }
+            const { x: endX, y: endY } = polarToXY(endAngle.value);
+            if (Math.hypot(event.x - endX, y - endY) < HANDLE_RADIUS + TOUCH_SLOP) {
+                activeKnob.value = 'end';
+                return;
             }
         })
         .onUpdate((event) => {
@@ -82,6 +78,7 @@ export default function ClockSlider({ mode, onValueChange }: {
                 if (diff < MIN_DIFF) endAngle.value = quantizedAngle + direction * STEP;
 
                 startAngle.value = quantizedAngle;
+                handleUpdate(startAngle.value, endAngle.value);
             }
             if (activeKnob.value == 'end' && quantizedAngle % (2 * Math.PI) !== endAngle.value % (2 * Math.PI)) {
                 const diff = angleDiff(quantizedAngle, startAngle.value);
@@ -90,12 +87,8 @@ export default function ClockSlider({ mode, onValueChange }: {
                 if (diff < MIN_DIFF) startAngle.value = quantizedAngle + direction * STEP;
 
                 endAngle.value = quantizedAngle;
+                handleUpdate(startAngle.value, endAngle.value);
             }
-            // if (quantizedAngle !== startAngle.value) {
-            //     // console.log(angle, quantizedAngle);
-            //     startAngle.value = quantizedAngle;
-            //     // handleUpdate(startAngle.value, endAngle.value);
-            // }
         })
         .onEnd(() => {
             activeKnob.value = null;
@@ -117,9 +110,7 @@ export default function ClockSlider({ mode, onValueChange }: {
         const { x: endX, y: endY } = polarToXY(endAngle.value);
         const largeArc = angleDiff(startAngle.value, endAngle.value) > Math.PI ? 1 : 0;
 
-        return {
-            d: mode === 'single' ? '' : `M ${startX} ${startY} A ${RADIUS} ${RADIUS} 0 ${largeArc} 1 ${endX} ${endY}`
-        };
+        return { d: `M ${startX} ${startY} A ${RADIUS} ${RADIUS} 0 ${largeArc} 1 ${endX} ${endY}` };
     });
 
     return (
@@ -136,9 +127,7 @@ export default function ClockSlider({ mode, onValueChange }: {
                     <AnimatedCircle animatedProps={startKnobProps} r={HANDLE_RADIUS} fill="white" />
 
                     {/* End Knob */}
-                    {mode === 'range' && (
-                        <AnimatedCircle animatedProps={endKnobProps} r={HANDLE_RADIUS} fill="#6f6f6f" />
-                    )}
+                    <AnimatedCircle animatedProps={endKnobProps} r={HANDLE_RADIUS} fill="#6f6f6f" />
                 </Svg>
             </View>
         </GestureDetector>
