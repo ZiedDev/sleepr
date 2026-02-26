@@ -12,7 +12,8 @@ const CENTER = SIZE / 2;
 const TOUCH_SLOP = 10;
 const HANDLE_RADIUS = 15;
 const STEP = (2 * Math.PI) / (12 * 60) * 30;// 30 minute increments
-const MIN_DIFF = STEP;
+const MIN_DIFF_FORWARD = 2 * STEP;
+const MIN_DIFF_BACKWARD = 4 * STEP;
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -41,7 +42,7 @@ export default function ClockSlider({ mode, onValueChange }: {
     const angleDiff = (angle1: number, angle2: number) => {
         'worklet';
         let diff = angle2 - angle1;
-        diff = (diff + 2 * Math.PI) % (2 * Math.PI)
+        diff = (diff + 2 * Math.PI) % (2 * Math.PI);
         return (diff < 1e-10 || Math.abs(diff - 2 * Math.PI) < 1e-10) ? 0 : diff;
     };
 
@@ -72,19 +73,29 @@ export default function ClockSlider({ mode, onValueChange }: {
 
 
             if (activeKnob.value == 'start' && quantizedAngle % (2 * Math.PI) !== startAngle.value % (2 * Math.PI)) {
-                const diff = angleDiff(quantizedAngle, endAngle.value);
-                const direction = angleDiff(startAngle.value, quantizedAngle) > Math.PI ? -1 : 1;
+                const direction = angleDiff(startAngle.value, quantizedAngle) <= Math.PI;
 
-                if (diff < MIN_DIFF) endAngle.value = quantizedAngle + direction * STEP;
+                if (direction) {
+                    const diff = angleDiff(quantizedAngle, endAngle.value);
+                    if (diff < MIN_DIFF_FORWARD) endAngle.value = quantizedAngle + MIN_DIFF_FORWARD;
+                } else {
+                    const diff = angleDiff(endAngle.value, quantizedAngle);
+                    if (diff < MIN_DIFF_BACKWARD) endAngle.value = quantizedAngle - MIN_DIFF_BACKWARD;
+                }
 
                 startAngle.value = quantizedAngle;
                 handleUpdate(startAngle.value, endAngle.value);
             }
             if (activeKnob.value == 'end' && quantizedAngle % (2 * Math.PI) !== endAngle.value % (2 * Math.PI)) {
-                const diff = angleDiff(quantizedAngle, startAngle.value);
-                const direction = angleDiff(endAngle.value, quantizedAngle) > Math.PI ? -1 : 1;
+                const direction = angleDiff(endAngle.value, quantizedAngle) <= Math.PI;
 
-                if (diff < MIN_DIFF) startAngle.value = quantizedAngle + direction * STEP;
+                if (direction) {
+                    const diff = angleDiff(quantizedAngle, startAngle.value);
+                    if (diff < MIN_DIFF_BACKWARD) startAngle.value = quantizedAngle + MIN_DIFF_BACKWARD;
+                } else {
+                    const diff = angleDiff(startAngle.value, quantizedAngle);
+                    if (diff < MIN_DIFF_FORWARD) startAngle.value = quantizedAngle - MIN_DIFF_FORWARD;
+                }
 
                 endAngle.value = quantizedAngle;
                 handleUpdate(startAngle.value, endAngle.value);
