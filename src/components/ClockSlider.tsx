@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Dimensions } from 'react-native';
+import { StyleSheet, Dimensions, View } from 'react-native';
 import Svg, { Circle, Path, G } from 'react-native-svg';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { useAnimatedProps, useSharedValue, SharedValue, useAnimatedStyle, withTiming, Easing, withSpring } from 'react-native-reanimated';
@@ -7,7 +7,7 @@ import * as Haptics from 'expo-haptics';
 import { scheduleOnRN } from 'react-native-worklets';
 
 const { width, height } = Dimensions.get('window');
-const SIZE = width * 0.8;
+const SIZE = width * 0.5;
 const RADIUS = SIZE / 2 - 20;
 const CENTER = SIZE / 2;
 
@@ -19,17 +19,10 @@ export default function ClockSlider({ mode, onValueChange }: {
     mode: 'range' | 'single' | 'locked';
     onValueChange?: (start: number, end?: number) => void;
 }) {
-    const translationX = useSharedValue(0);
-    const translationY = useSharedValue(0);
+    const translationX = useSharedValue(CENTER);
+    const translationY = useSharedValue(CENTER);
     const prevTranslationX = useSharedValue(0);
     const prevTranslationY = useSharedValue(0);
-
-    const animatedStyles = useAnimatedStyle(() => ({
-        transform: [
-            { translateX: translationX.value },
-            { translateY: translationY.value },
-        ],
-    }));
 
     const pan = Gesture.Pan()
         .onStart(() => {
@@ -51,13 +44,13 @@ export default function ClockSlider({ mode, onValueChange }: {
             );
         })
         .onEnd(() => {
-            translationX.value = withSpring(0, {
+            translationX.value = withSpring(CENTER, {
                 damping: 10,
                 stiffness: 120,
                 mass: 1,
                 overshootClamping: false,
             });
-            translationY.value = withSpring(0, {
+            translationY.value = withSpring(CENTER, {
                 damping: 10,
                 stiffness: 120,
                 mass: 1,
@@ -67,9 +60,24 @@ export default function ClockSlider({ mode, onValueChange }: {
             prevTranslationY.value = translationY.value;
         });
 
+    const animatedProps = useAnimatedProps(() => ({
+        cx: translationX.value,
+        cy: translationY.value,
+    }));
+
     return (
         <GestureDetector gesture={pan}>
-            <Animated.View style={[animatedStyles, styles.box]}></Animated.View>
+            <View style={{ width: SIZE, height: SIZE }}>
+                <Svg width={SIZE} height={SIZE}>
+                    <AnimatedCircle
+                        animatedProps={animatedProps}
+                        r={RADIUS}
+                        stroke="#222"
+                        strokeWidth={30}
+                        fill="none"
+                    />
+                </Svg>
+            </View>
         </GestureDetector>
     );
 };
