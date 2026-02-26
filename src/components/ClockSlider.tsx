@@ -12,44 +12,63 @@ interface ClockSliderProps {
     // rad 0 -> 2*PI clockwise from positive x-axis
     startAngle?: SharedValue<number>;
     endAngle?: SharedValue<number>;
-    step?: number;
     onValueChange?: (start: number, end: number) => void;
 
     startIcon?: React.ReactNode;
     endIcon?: React.ReactNode;
+    iconSize?: number;
+
+    step?: number;
+    forwardDifference?: number;
+    backwardDifference?: number;
 
     size: number;
     touchSlop?: number;
     knobRadius?: number;
-    iconSize?: number;
+    trackWidth?: number;
+    arcWidth?: number;
     tickLength?: number;
-    forwardDifference?: number;
-    backwardDifference?: number;
+
+    trackColor?: string;
+    tickColor?: string;
+    arcColor?: string;
+    startKnobColor?: string;
+    endKnobColor?: string;
 }
 
 export default function ClockSlider({
     startAngle = useSharedValue(Math.PI * 1.5),
     endAngle = useSharedValue(Math.PI * 0.5),
-    step = (2 * Math.PI) / (12 * 60) * 30, // 30 minute increments
     onValueChange,
 
     startIcon,
     endIcon,
+    iconSize = 25,
+
+    step = (2 * Math.PI) / (12 * 60) * 30, // 30 minute increments
+    forwardDifference = 2,
+    backwardDifference = 4,
 
     size,
     touchSlop = 10,
     knobRadius = 15,
-    iconSize = 25,
+    trackWidth = 30,
+    arcWidth = 30,
     tickLength = 10,
-    forwardDifference = 2,
-    backwardDifference = 4,
+
+    trackColor = "#222",
+    tickColor = "#444",
+    arcColor = "#f19848",
+    startKnobColor = "#ee872d",
+    endKnobColor = "#ee872d",
 }: ClockSliderProps) {
     const RADIUS = size / 2 - 20;
     const CENTER = size / 2;
     const MIN_DIFF_FORWARD = forwardDifference * step;
     const MIN_DIFF_BACKWARD = backwardDifference * step;
 
-    const activeKnob = useSharedValue<'start' | 'end' | null>(null);
+    const activeKnob = useSharedValue<'start' | 'end' | 'middle' | null>(null);
+    const midAngle = useSharedValue<number>(0);
 
     const handleUpdate = (s: number, e: number) => {
         'worklet';
@@ -82,6 +101,23 @@ export default function ClockSlider({
                 activeKnob.value = 'end';
                 return;
             }
+
+            const x = event.x - CENTER;
+            const y = event.y - CENTER;
+            let angle = Math.atan2(y, x);
+            if (angle < 0) angle += (2 * Math.PI);
+
+            const dist = Math.hypot(x, y);
+
+            if ((dist >= RADIUS - trackWidth / 2 - touchSlop / 2) &&
+                (dist <= RADIUS + trackWidth / 2 + touchSlop / 2) &&
+                (angleDiff(startAngle.value, angle) < angleDiff(startAngle.value, endAngle.value))
+            ) {
+                activeKnob.value = 'middle';
+                const quantizedAngle = Math.round(angle / step) * step;
+                midAngle.value = quantizedAngle;
+                return;
+            }
         })
         .onUpdate((event) => {
             const x = event.x - CENTER;
@@ -106,7 +142,7 @@ export default function ClockSlider({
                 startAngle.value = quantizedAngle;
                 handleUpdate(startAngle.value, endAngle.value);
             }
-            if (activeKnob.value == 'end' && quantizedAngle % (2 * Math.PI) !== endAngle.value % (2 * Math.PI)) {
+            else if (activeKnob.value == 'end' && quantizedAngle % (2 * Math.PI) !== endAngle.value % (2 * Math.PI)) {
                 const direction = angleDiff(endAngle.value, quantizedAngle) <= Math.PI;
 
                 if (direction) {
@@ -119,6 +155,12 @@ export default function ClockSlider({
 
                 endAngle.value = quantizedAngle;
                 handleUpdate(startAngle.value, endAngle.value);
+            }
+            else if (activeKnob.value == 'middle' && quantizedAngle % (2 * Math.PI) !== midAngle.value % (2 * Math.PI)) {
+                const direction = angleDiff(midAngle.value, quantizedAngle) <= Math.PI ? 1 : -1;
+                startAngle.value += step * direction;
+                endAngle.value += step * direction;
+                midAngle.value = quantizedAngle;
             }
         })
         .onEnd(() => {
@@ -171,7 +213,7 @@ export default function ClockSlider({
             <View style={{ width: size, height: size }}>
                 <Svg width={size} height={size}>
                     {/* Track */}
-                    <Circle cx={CENTER} cy={CENTER} r={RADIUS} stroke="#222" strokeWidth={30} fill="none" />
+                    <Circle cx={CENTER} cy={CENTER} r={RADIUS} stroke={trackColor} strokeWidth={trackWidth} fill="none" />
 
                     {/* Ticks */}
                     {Array.from({ length: Math.round((2 * Math.PI) / step) }).map((_, i) => {
@@ -192,7 +234,7 @@ export default function ClockSlider({
                                 y1={innerY}
                                 x2={outerX}
                                 y2={outerY}
-                                stroke="#444"
+                                stroke={tickColor}
                                 strokeWidth={2}
                                 strokeLinecap="round"
                             />
@@ -200,13 +242,13 @@ export default function ClockSlider({
                     })}
 
                     {/* Arc */}
-                    <AnimatedPath animatedProps={arcProps} stroke="#f19848" strokeWidth={30} fill="none" />
+                    <AnimatedPath animatedProps={arcProps} stroke={arcColor} strokeWidth={arcWidth} fill="none" />
 
                     {/* Start Knob */}
-                    <AnimatedCircle animatedProps={startKnobProps} r={knobRadius} fill="#ee872d" />
+                    <AnimatedCircle animatedProps={startKnobProps} r={knobRadius} fill={startKnobColor} />
 
                     {/* End Knob */}
-                    <AnimatedCircle animatedProps={endKnobProps} r={knobRadius} fill="#ee872d" />
+                    <AnimatedCircle animatedProps={endKnobProps} r={knobRadius} fill={endKnobColor} />
                 </Svg>
 
                 {/* Start Icon */}
