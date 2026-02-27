@@ -27,7 +27,11 @@ interface ClockSliderProps {
     knobRadius?: number;
     trackWidth?: number;
     arcWidth?: number;
-    tickLength?: number;
+    tickOptions?: {
+        div: number;
+        length: number;
+        color: string;
+    }[];
 
     trackColor?: string;
     tickColor?: string;
@@ -54,10 +58,13 @@ export default function ClockSlider({
     knobRadius = 15,
     trackWidth = 30,
     arcWidth = 30,
-    tickLength = 10,
+    tickOptions = [
+        { div: 4, length: 14, color: "#444444ff" },
+        { div: 2, length: 8, color: "#44444499" },
+        { div: 1, length: 4, color: "#44444499" }
+    ],
 
     trackColor = "#222",
-    tickColor = "#444",
     arcColor = "#f19848",
     startKnobColor = "#ee872d",
     endKnobColor = "#ee872d",
@@ -223,12 +230,14 @@ export default function ClockSlider({
                     {/* Ticks */}
                     {Array.from({ length: Math.round((2 * Math.PI) / step) }).map((_, i) => {
                         const angle = i * step;
+                        const option = tickOptions.find(option => i % option.div === 0);
+                        if (!option) return;
 
-                        const outerRadius = RADIUS + tickLength / 2;
+                        const outerRadius = RADIUS + option.length / 2;
                         const outerX = CENTER + outerRadius * Math.cos(angle);
                         const outerY = CENTER + outerRadius * Math.sin(angle);
 
-                        const innerRadius = RADIUS - tickLength / 2;
+                        const innerRadius = RADIUS - option.length / 2;
                         const innerX = CENTER + innerRadius * Math.cos(angle);
                         const innerY = CENTER + innerRadius * Math.sin(angle);
 
@@ -239,7 +248,7 @@ export default function ClockSlider({
                                 y1={innerY}
                                 x2={outerX}
                                 y2={outerY}
-                                stroke={tickColor}
+                                stroke={option.color}
                                 strokeWidth={2}
                                 strokeLinecap="round"
                             />

@@ -27,11 +27,12 @@ export default function SettingsScreen() {
     <View style={styles.container}>
       <Text style={{ fontSize: 35 }}>{clock}</Text >
       <ClockSlider
-        size={Dimensions.get('window').width * 0.5}
+        size={Dimensions.get('window').width * 0.7}
         onValueChange={(s, e) => setClock(getStrFromRad(s, e))}
-        forwardDifference={12}
-        backwardDifference={48}
-        step = {(2 * Math.PI) / (24 * 60) * 10}
+
+        step={(2 * Math.PI) / (24 * 60) * 15}
+        forwardDifference={4}
+        backwardDifference={16}
 
         startIcon={
           <Svg width={25} height={25} viewBox="0 0 24 24">
