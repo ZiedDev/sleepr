@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import Svg, { Circle, Line } from 'react-native-svg';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { useAnimatedProps, useSharedValue, runOnJS, useAnimatedStyle, SharedValue } from 'react-native-reanimated';
+import Animated, { useAnimatedProps, useSharedValue, useAnimatedStyle, SharedValue } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { scheduleOnRN } from 'react-native-worklets';
 
@@ -18,6 +18,7 @@ interface ClockSliderProps {
     iconSize?: number;
 
     step?: number;
+    quantize?: boolean;
 
     size: number;
     touchSlop?: number;
@@ -45,6 +46,7 @@ export default function ClockSlider({
     iconSize = 25,
 
     step = (2 * Math.PI) / (12 * 60) * 30, // 30 minute increments
+    quantize = true,
 
     size,
     touchSlop = 10,
@@ -77,11 +79,11 @@ export default function ClockSlider({
         return { x: CENTER + RADIUS * Math.cos(angle), y: CENTER + RADIUS * Math.sin(angle) };
     };
 
-    const angleDiff = (angle1: number, angle2: number) => {
+    const angleDiff = (from: number, to: number) => {
         'worklet';
-        let diff = angle2 - angle1;
-        diff = (diff + 2 * Math.PI) % (2 * Math.PI);
-        return (diff < 1e-10 || Math.abs(diff - 2 * Math.PI) < 1e-10) ? 0 : diff;
+        let diff = to - from;
+        diff = (diff + Math.PI) % (2 * Math.PI) - Math.PI;
+        return diff;
     };
 
     const pan = Gesture.Pan()
@@ -101,16 +103,24 @@ export default function ClockSlider({
             }
         })
         .onUpdate((event) => {
+            if (activeKnob.value == null) return;
             const x = event.x - CENTER;
             const y = event.y - CENTER;
-            let angle = Math.atan2(y, x);
-            if (angle < 0) angle += (2 * Math.PI);
 
-            const quantizedAngle = Math.round(angle / step) * step;
+            const dist = Math.hypot(x, y);
 
+            let fingerAngle = Math.atan2(y, x);
+            if (fingerAngle < 0) fingerAngle += 2 * Math.PI;
 
-            if (activeKnob.value == 'start' && quantizedAngle % (2 * Math.PI) !== startAngle.value % (2 * Math.PI)) {
-                startAngle.value = quantizedAngle;
+            const delta = angleDiff(startAngle.value, fingerAngle);
+            const gain = dist < RADIUS * 0.5 ? dist / RADIUS / 2 : 1;
+
+            const angle = startAngle.value + delta * gain;
+            const quantizedAngle = quantize ? Math.round(angle / step) * step : angle;
+            const normalizedAngle = (quantizedAngle + 2 *Math.PI) % (2 * Math.PI);
+
+            if (normalizedAngle !== startAngle.value) {
+                startAngle.value = normalizedAngle;
                 handleUpdate(startAngle.value);
             }
         })
@@ -136,6 +146,11 @@ export default function ClockSlider({
         };
     });
 
+    const ticks = tickOptions ? React.useMemo(
+        () => buildTicks(RADIUS, CENTER, step, tickOptions),
+        [RADIUS, CENTER, step, tickOptions]
+    ) : null;
+
     return (
         <GestureDetector gesture={pan}>
             <View style={[{ width: size, height: size }, style]}>
@@ -144,32 +159,18 @@ export default function ClockSlider({
                     <Circle cx={CENTER} cy={CENTER} r={RADIUS} stroke={trackColor} strokeWidth={trackWidth} fill="none" />
 
                     {/* Ticks */}
-                    {Array.from({ length: Math.round((2 * Math.PI) / step) }).map((_, i) => {
-                        const angle = i * step;
-                        const option = tickOptions.find(option => i % option.div === 0);
-                        if (!option) return;
-
-                        const outerRadius = RADIUS + option.length / 2;
-                        const outerX = CENTER + outerRadius * Math.cos(angle);
-                        const outerY = CENTER + outerRadius * Math.sin(angle);
-
-                        const innerRadius = RADIUS - option.length / 2;
-                        const innerX = CENTER + innerRadius * Math.cos(angle);
-                        const innerY = CENTER + innerRadius * Math.sin(angle);
-
-                        return (
-                            <Line
-                                key={`tick-${i}`}
-                                x1={innerX}
-                                y1={innerY}
-                                x2={outerX}
-                                y2={outerY}
-                                stroke={option.color}
-                                strokeWidth={2}
-                                strokeLinecap="round"
-                            />
-                        );
-                    })}
+                    {ticks && ticks.map(t => (
+                        <Line
+                            key={t.key}
+                            x1={t.x1}
+                            y1={t.y1}
+                            x2={t.x2}
+                            y2={t.y2}
+                            stroke={t.color}
+                            strokeWidth={2}
+                            strokeLinecap="round"
+                        />
+                    ))}
 
                     {/* Start Knob */}
                     <AnimatedCircle animatedProps={startKnobProps} r={knobRadius} fill={startKnobColor} />
@@ -184,6 +185,35 @@ export default function ClockSlider({
             </View>
         </GestureDetector>
     );
+};
+
+const buildTicks = (
+    radius: number, center: number, step: number,
+    tickOptions: { div: number; length: number; color: string; }[]
+) => {
+    const total = Math.round((2 * Math.PI) / step);
+    const lines = [];
+
+    for (let i = 0; i < total; i++) {
+        const option = tickOptions.find(o => i % o.div === 0);
+        if (!option) continue;
+
+        const angle = i * step;
+
+        const outerR = radius + option.length / 2;
+        const innerR = radius - option.length / 2;
+
+        lines.push({
+            key: `tick-${i}`,
+            x1: center + innerR * Math.cos(angle),
+            y1: center + innerR * Math.sin(angle),
+            x2: center + outerR * Math.cos(angle),
+            y2: center + outerR * Math.sin(angle),
+            color: option.color
+        });
+    }
+
+    return lines;
 };
 
 const styles = StyleSheet.create({
