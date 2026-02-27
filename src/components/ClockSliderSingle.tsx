@@ -79,9 +79,18 @@ export default function ClockSlider({
         return { x: CENTER + RADIUS * Math.cos(angle), y: CENTER + RADIUS * Math.sin(angle) };
     };
 
-    const angleDiff = (from: number, to: number) => {
+    const absoluteAngleDelta = (from: number, to: number) => {
         'worklet';
         let diff = to - from;
+        diff = (diff + 2 * Math.PI) % (2 * Math.PI);
+        return (diff < 1e-10 || Math.abs(diff - 2 * Math.PI) < 1e-10) ? 0 : diff;
+    };
+
+    const signedAngleDelta = (from: number, to: number) => {
+        'worklet';
+        const diffP = absoluteAngleDelta(from, to);
+        const diffN = absoluteAngleDelta(to, from);
+        let diff = diffP < diffN ? diffP : -diffN;
         diff = (diff + Math.PI) % (2 * Math.PI) - Math.PI;
         return diff;
     };
@@ -112,12 +121,12 @@ export default function ClockSlider({
             let fingerAngle = Math.atan2(y, x);
             if (fingerAngle < 0) fingerAngle += 2 * Math.PI;
 
-            const delta = angleDiff(startAngle.value, fingerAngle);
+            const delta = signedAngleDelta(startAngle.value, fingerAngle);
             const gain = dist < RADIUS * 0.5 ? dist / RADIUS / 2 : 1;
 
             const angle = startAngle.value + delta * gain;
             const quantizedAngle = quantize ? Math.round(angle / step) * step : angle;
-            const normalizedAngle = (quantizedAngle + 2 *Math.PI) % (2 * Math.PI);
+            const normalizedAngle = (quantizedAngle + 2 * Math.PI) % (2 * Math.PI);
 
             if (normalizedAngle !== startAngle.value) {
                 startAngle.value = normalizedAngle;
