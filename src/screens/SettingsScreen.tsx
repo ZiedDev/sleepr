@@ -29,7 +29,7 @@ export default function SettingsScreen() {
       <Text style={{ fontSize: 35 }}>{clock}</Text >
       <ClockSlider
         size={Dimensions.get('window').width * 0.7}
-        onValueChange={(s, e) => setClock(getStrFromRad(s, e))}
+        onValueSet={(s, e) => setClock(getStrFromRad(s, e))}
 
         step={(2 * Math.PI) / (24 * 60) * 15}
         forwardDifference={4}
@@ -50,7 +50,7 @@ export default function SettingsScreen() {
         style={{ marginTop: 10 }}
 
         size={Dimensions.get('window').width * 0.5}
-        onValueChange={(s) => { }}
+        // onValueChange={(s) => { console.log(s); }}
 
         step={(2 * Math.PI) / (24 * 60) * 30}
 

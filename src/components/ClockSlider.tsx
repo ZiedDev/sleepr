@@ -4,6 +4,7 @@ import Svg, { Circle, Line, Path } from 'react-native-svg';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useAnimatedProps, useSharedValue, runOnJS, useAnimatedStyle, SharedValue } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import { scheduleOnRN } from 'react-native-worklets';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -13,6 +14,7 @@ interface ClockSliderProps {
     startAngle?: SharedValue<number>;
     endAngle?: SharedValue<number>;
     onValueChange?: (start: number, end: number) => void;
+    onValueSet?: (start: number, end: number) => void;
 
     startIcon?: React.ReactNode;
     endIcon?: React.ReactNode;
@@ -46,6 +48,7 @@ export default function ClockSlider({
     startAngle = useSharedValue(Math.PI * 1.5),
     endAngle = useSharedValue(Math.PI * 0.5),
     onValueChange,
+    onValueSet,
 
     startIcon,
     endIcon,
@@ -83,8 +86,8 @@ export default function ClockSlider({
 
     const handleUpdate = (s: number, e: number) => {
         'worklet';
-        if (onValueChange) runOnJS(onValueChange)(s, e);
-        runOnJS(Haptics.selectionAsync)();
+        if (onValueChange) scheduleOnRN(onValueChange, s, e);
+        scheduleOnRN(Haptics.selectionAsync);
     };
 
     const polarToXY = (angle: number) => {
@@ -181,6 +184,7 @@ export default function ClockSlider({
         })
         .onEnd(() => {
             activeKnob.value = null;
+            if (onValueSet) scheduleOnRN(onValueSet, startAngle.value, endAngle.value);
         });
 
 
