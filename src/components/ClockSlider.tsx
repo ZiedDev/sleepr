@@ -90,6 +90,14 @@ export default function ClockSlider({
 
     const pan = Gesture.Pan()
         .onStart((event) => {
+            const x = event.x - CENTER;
+            const y = event.y - CENTER;
+
+            const dist = Math.hypot(x, y);
+
+            if ((dist < RADIUS - trackWidth / 2 - touchSlop / 2) ||
+                (dist > RADIUS + trackWidth / 2 + touchSlop / 2)) return;
+
             const { x: startX, y: startY } = polarToXY(startAngle.value);
             if (Math.hypot(event.x - startX, event.y - startY) < knobRadius + touchSlop) {
                 activeKnob.value = 'start';
@@ -102,17 +110,10 @@ export default function ClockSlider({
                 return;
             }
 
-            const x = event.x - CENTER;
-            const y = event.y - CENTER;
             let angle = Math.atan2(y, x);
             if (angle < 0) angle += (2 * Math.PI);
 
-            const dist = Math.hypot(x, y);
-
-            if ((dist >= RADIUS - trackWidth / 2 - touchSlop / 2) &&
-                (dist <= RADIUS + trackWidth / 2 + touchSlop / 2) &&
-                (angleDiff(startAngle.value, angle) < angleDiff(startAngle.value, endAngle.value))
-            ) {
+            if (angleDiff(startAngle.value, angle) < angleDiff(startAngle.value, endAngle.value)) {
                 activeKnob.value = 'middle';
                 const quantizedAngle = Math.round(angle / step) * step;
                 midAngle.value = quantizedAngle;
@@ -159,9 +160,10 @@ export default function ClockSlider({
             else if (activeKnob.value == 'middle' && quantizedAngle % (2 * Math.PI) !== midAngle.value % (2 * Math.PI)) {
                 const diff = angleDiff(midAngle.value, quantizedAngle);
                 const direction = diff <= Math.PI ? 1 : -1;
-                // TODO Fix this part pookie sherbo <3 uwu
-                startAngle.value += step * direction * diff / step;
-                endAngle.value += step * direction * diff / step;
+                const v = direction * Math.min(diff, angleDiff(quantizedAngle, midAngle.value))
+
+                startAngle.value += v;
+                endAngle.value += v;
                 midAngle.value = quantizedAngle;
                 handleUpdate(startAngle.value, endAngle.value);
             }
