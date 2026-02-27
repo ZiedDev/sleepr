@@ -73,7 +73,7 @@ export default function ClockSlider({
     const handleUpdate = (s: number, e: number) => {
         'worklet';
         if (onValueChange) runOnJS(onValueChange)(s, e);
-        runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Light);
+        runOnJS(Haptics.selectionAsync)();
     };
 
     const polarToXY = (angle: number) => {
@@ -157,10 +157,13 @@ export default function ClockSlider({
                 handleUpdate(startAngle.value, endAngle.value);
             }
             else if (activeKnob.value == 'middle' && quantizedAngle % (2 * Math.PI) !== midAngle.value % (2 * Math.PI)) {
-                const direction = angleDiff(midAngle.value, quantizedAngle) <= Math.PI ? 1 : -1;
-                startAngle.value += step * direction;
-                endAngle.value += step * direction;
+                const diff = angleDiff(midAngle.value, quantizedAngle);
+                const direction = diff <= Math.PI ? 1 : -1;
+                // TODO Fix this part pookie sherbo <3 uwu
+                startAngle.value += step * direction * diff / step;
+                endAngle.value += step * direction * diff / step;
                 midAngle.value = quantizedAngle;
+                handleUpdate(startAngle.value, endAngle.value);
             }
         })
         .onEnd(() => {

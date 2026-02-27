@@ -29,8 +29,9 @@ export default function SettingsScreen() {
       <ClockSlider
         size={Dimensions.get('window').width * 0.5}
         onValueChange={(s, e) => setClock(getStrFromRad(s, e))}
-
-        step = {(2 * Math.PI) / (24 * 60) * 60}
+        forwardDifference={12}
+        backwardDifference={48}
+        step = {(2 * Math.PI) / (24 * 60) * 10}
 
         startIcon={
           <Svg width={25} height={25} viewBox="0 0 24 24">
