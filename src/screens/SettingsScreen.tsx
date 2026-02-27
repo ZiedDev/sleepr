@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Platform, Dimensions, Text } from 'react-native';
+import { View, StyleSheet, Platform, Dimensions, Text, TextInput } from 'react-native';
 import ClockSlider from '../components/ClockSlider'
 import ClockSliderSingle from '../components/ClockSliderSingle';;
 import useColorStore from '../hooks/useColors';
 import Svg, { Path } from 'react-native-svg';
 import { DateTime } from 'luxon';
-import { interpolate } from 'react-native-reanimated';
+import { createAnimatedComponent, interpolate, useAnimatedProps, useDerivedValue, useSharedValue } from 'react-native-reanimated';
 
 const getStrFromRad = (startAngle: number, endAngle: number) => {
   const hourStart = interpolate(startAngle, [0, 2 * Math.PI], [6, 30]) % 24;
@@ -15,8 +15,31 @@ const getStrFromRad = (startAngle: number, endAngle: number) => {
   return `${startStr} -> ${endStr}`;
 }
 
+const formatTime = (totalHours: number) => {
+  'worklet';
+  const h = Math.floor(totalHours % 24);
+  const m = Math.floor((totalHours * 60) % 60);
+  const suffix = h >= 12 ? 'PM' : 'AM';
+  const displayHour = h % 12 === 0 ? 12 : h % 12;
+  const displayMinute = m < 10 ? `0${m}` : m;
+  return `${displayHour}:${displayMinute} ${suffix}`;
+};
+
+const AnimatedTextInput = createAnimatedComponent(TextInput);
+
 export default function SettingsScreen() {
-  const [clock, setClock] = useState(getStrFromRad(Math.PI * 1.5, Math.PI * 0.5));
+  const singleAngle = useSharedValue(Math.PI * 1.5);
+
+  const singleClockStr = useDerivedValue(() => {
+    const hour = interpolate(singleAngle.value, [0, 2 * Math.PI], [6, 30]) % 24;
+    return formatTime(hour);
+  });
+
+  const animatedProps = useAnimatedProps(() => {
+    return {
+      text: singleClockStr.value,
+    } as any;
+  });
 
   if (['android', 'web'].includes(Platform.OS)) {
     useEffect(() => {
@@ -26,10 +49,16 @@ export default function SettingsScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={{ fontSize: 35 }}>{clock}</Text >
+      <AnimatedTextInput
+        underlineColorAndroid="transparent"
+        editable={false}
+        value={singleClockStr.value} // Fallback for JS initial render
+        animatedProps={animatedProps}
+        style={{ fontSize: 24, fontWeight: 'bold', color: '#fff' }}
+      />
       <ClockSlider
         size={Dimensions.get('window').width * 0.7}
-        onValueChange={(s, e) => setClock(getStrFromRad(s, e))}
+        // onValueChange={(s, e) => setClock(getStrFromRad(s, e))}
 
         step={(2 * Math.PI) / (24 * 60) * 15}
         forwardDifference={4}
@@ -49,10 +78,13 @@ export default function SettingsScreen() {
       <ClockSliderSingle
         style={{ marginTop: 10 }}
 
+        startAngle={singleAngle}
+
         size={Dimensions.get('window').width * 0.5}
-        onValueChange={(s) => { }}
+        // onValueChange={(s) => { console.log(s); }}
 
         step={(2 * Math.PI) / (24 * 60) * 30}
+        // quantize={false}
 
         startKnobColor='#27b2fc'
         trackColor='#2e2e2e'
