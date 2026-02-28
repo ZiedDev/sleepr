@@ -74,8 +74,7 @@ export default function NavBar({
 
   return (
     <GestureDetector gesture={pan}>
-      <View>
-
+      <View style={styles.gestureContainer}>
         <SafeBlurView style={styles.container} intensity={15}>
 
           {/* Nav Buttons */}
@@ -94,8 +93,6 @@ export default function NavBar({
           <Animated.View style={[styles.navSelector, selectorStyle]}/>
         </View>
       </View>
-
-
     </GestureDetector>
   );
 }
@@ -158,6 +155,13 @@ const NavButton = ({ label, Icon, index, selectedIndex, onPress }: {
 }
 
 const styles = StyleSheet.create({
+  gestureContainer : {
+    position: "absolute",
+    bottom: 0,
+    width: width - HORIZONTAL_PADDING,
+    height: BUTTON_HEIGHT,
+  },
+
   container: {
     overflow: "hidden",
     position: "absolute",
