@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, TouchableOpacity, Text, StyleSheet, Dimensions } from 'react-native';
-import Animated, { cubicBezier, interpolateColor, useDerivedValue, useSharedValue, withTiming, Easing, useAnimatedStyle, SharedValue } from 'react-native-reanimated';
+import { View, TouchableOpacity, Text, StyleSheet, Dimensions, Button } from 'react-native';
+import Animated, { cubicBezier, interpolateColor, useDerivedValue, useSharedValue, withTiming, Easing, useAnimatedStyle, SharedValue, withSpring } from 'react-native-reanimated';
 import SafeBlurView from './SafeBlurView';
 import PhMoonBold from '../../assets/svgs/PhMoonBold';
 import PhChartBarBold from '../../assets/svgs/PhChartBarBold';
 import PhGearBold from '../../assets/svgs/PhGearBold';
+import { Gesture, GestureDetector, GestureStateChangeEvent, GestureUpdateEvent, PanGestureHandlerEventPayload } from 'react-native-gesture-handler';
+import { scheduleOnRN } from 'react-native-worklets';
 
 
 const navOptions = [
@@ -18,7 +20,7 @@ type NavState = typeof navOptions[number]["key"];
 const { width } = Dimensions.get('window');
 const HORIZONTAL_PADDING = 20;
 const BUTTON_WIDTH = (width - HORIZONTAL_PADDING - 8) / navOptions.length;
-
+const BUTTON_HEIGHT = 82;
 const AnimatedText = Animated.createAnimatedComponent(Text);
 
 export default function NavBar({
@@ -31,39 +33,70 @@ export default function NavBar({
   const selectedIndex = useSharedValue(
     navOptions.findIndex(n => n.key === navState)
   );
+  const translationX = useSharedValue(0);
 
   useEffect(() => {
-    selectedIndex.value = withTiming(
-      navOptions.findIndex(n => n.key === navState),
-      {
-        duration: 500,
-        easing: Easing.bezier(0.5, 0.05, 0.53, 1.3),
-      }
-    );
+    selectedIndex.value = navOptions.findIndex(n => n.key === navState);
   }, [navState]);
 
   const selectorStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: (BUTTON_WIDTH) * selectedIndex.value }],
-
+    transform: [{ translateX: translationX.value }],
   }));
 
-  return (
-    <SafeBlurView style={styles.container} intensity={42}>
-      {/* Selector */}
-      <Animated.View style={[styles.navSelector, selectorStyle]}>
-        <SafeBlurView intensity={42} />
-      </Animated.View>
+  const handleGesture = (event:
+    GestureStateChangeEvent<PanGestureHandlerEventPayload> |
+    GestureUpdateEvent<PanGestureHandlerEventPayload>) => {
 
-      {/* Nav Buttons */}
-      {navOptions.map((option, index) => (<NavButton
-        key={option.key}
-        label={option.key}
-        Icon={option.icon}
-        index={index}
-        selectedIndex={selectedIndex}
-        onPress={() => setNavState(option.key)}
-      />))}
-    </SafeBlurView>
+    selectedIndex.value = Math.min(Math.max(0, (event.x - BUTTON_WIDTH / 2) / BUTTON_WIDTH), (navOptions.length - 1));
+
+    translationX.value = withSpring(Math.min(Math.max(0, event.x - BUTTON_WIDTH / 2), BUTTON_WIDTH * (navOptions.length - 1)), {
+      damping: 20,
+      stiffness: 280,
+      mass: 1,
+      overshootClamping: false,
+    });
+  }
+
+  const pan = Gesture.Pan()
+    .onBegin(handleGesture)
+    .onUpdate(handleGesture)
+    .onFinalize(event => {
+      selectedIndex.value = Math.min(Math.max(0, Math.round(selectedIndex.value)), (navOptions.length - 1));
+      translationX.value = withSpring(BUTTON_WIDTH * selectedIndex.value, {
+        damping: 20,
+        stiffness: 240,
+        mass: 1,
+        overshootClamping: false,
+      });
+
+      scheduleOnRN(setNavState, navOptions[selectedIndex.value].key);
+    });
+
+  return (
+    <GestureDetector gesture={pan}>
+      <View>
+
+        <SafeBlurView style={styles.container} intensity={15}>
+
+          {/* Nav Buttons */}
+          {navOptions.map((option, index) => (<NavButton
+            key={option.key}
+            label={option.key}
+            Icon={option.icon}
+            index={index}
+            selectedIndex={selectedIndex}
+          // onPress={() => setNavState(option.key)}
+          />))}
+        </SafeBlurView>
+
+        <View style={styles.navSelectorContainer}>
+          {/* Selector */}
+          <Animated.View style={[styles.navSelector, selectorStyle]}/>
+        </View>
+      </View>
+
+
+    </GestureDetector>
   );
 }
 
@@ -72,7 +105,7 @@ const NavButton = ({ label, Icon, index, selectedIndex, onPress }: {
   Icon: React.ComponentType<any>,
   index: number,
   selectedIndex: SharedValue<number>,
-  onPress: () => void,
+  onPress?: () => void,
 }) => {
   const textStyle = useAnimatedStyle(() => {
     const color = interpolateColor(
@@ -140,6 +173,7 @@ const styles = StyleSheet.create({
     borderColor: "rgba(67, 67, 67, 0.6)",
     borderRadius: 30,
     width: width - HORIZONTAL_PADDING,
+    height: BUTTON_HEIGHT,
     paddingVertical: 17.5,
   },
 
@@ -155,6 +189,17 @@ const styles = StyleSheet.create({
   buttonText: {
     fontWeight: "bold",
     color: "white",
+  },
+
+  navSelectorContainer: {
+    position: "absolute",
+    bottom: 0,
+    marginHorizontal: HORIZONTAL_PADDING / 2,
+    borderWidth: 2,
+    borderColor: "rgba(0, 0, 0, 0)",
+    width: width - HORIZONTAL_PADDING,
+    paddingVertical: 17.5,
+    height: BUTTON_HEIGHT
   },
 
   navSelector: {
