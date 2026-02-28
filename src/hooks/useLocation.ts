@@ -24,15 +24,10 @@ const useLocation = create<LocationState>((set, get) => ({
 
     fetchCurrentLocation: async () => {
         try {
-            const loc = await Location.getCurrentPositionAsync({
-                accuracy: Location.Accuracy.Low,
+            return await Location.getCurrentPositionAsync({
+                accuracy: Location.Accuracy.Low
             });
-            set({ location: loc, errorMsg: null, loading: false });
-            useStorage.getState().setLastLocation(loc);
-
-            return loc;
         } catch (e) {
-            set({ location: null, errorMsg: 'Failed to fetch location', loading: false });
             console.error("[useLocation] Failed to fetch current location:", e);
             return null;
         }
@@ -44,10 +39,7 @@ const useLocation = create<LocationState>((set, get) => ({
 
             // check local lastLocation (maxAgeShort)
             const stored = useStorage.getState().lastLocation;
-            if (stored && now - stored.timestamp <= maxAgeShort) {
-                set({ location: stored, errorMsg: null, loading: false });
-                return stored;
-            }
+            if (stored && now - stored.timestamp <= maxAgeShort) return stored;
 
             // fallback to timezone
             const zoneName = DateTime.now().zoneName;
@@ -68,7 +60,6 @@ const useLocation = create<LocationState>((set, get) => ({
                     },
                     timestamp: now,
                 };
-                set({ location: tzLoc, errorMsg: null, loading: false });
                 return tzLoc;
             }
 
@@ -86,11 +77,9 @@ const useLocation = create<LocationState>((set, get) => ({
                 },
                 timestamp: now,
             };
-            set({ location: offsetLoc, errorMsg: null, loading: false });
             return offsetLoc;
 
         } catch (e) {
-            set({ location: null, errorMsg: 'Failed to fetch location', loading: false });
             console.error("[useLocation] Failed to fetch offline location:", e);
             return null;
         }
@@ -98,21 +87,18 @@ const useLocation = create<LocationState>((set, get) => ({
 
     initialize: async () => {
         try {
-            const now = Date.now();
-
             // PRE PERMISSION REQUEST
-            await get().fetchOfflineLocation();
+            const offlineLoc = await get().fetchOfflineLocation();
+            if (offlineLoc) set({ location: offlineLoc, errorMsg: null, loading: false });
 
             // PERMISSION REQUEST
             let currentStatus = (await Location.getForegroundPermissionsAsync()).status;
-            if (currentStatus === 'undetermined') {
+            if (currentStatus === 'undetermined')
                 currentStatus = (await Location.requestForegroundPermissionsAsync()).status;
-            }
             if (currentStatus !== 'granted') {
-                // set({ location: null, errorMsg: 'Permission denied', loading: false });
                 console.error("[useLocation] Permission denied");
                 return;
-            }  
+            }
 
             // POST PERMISSION REQUEST
 
@@ -121,14 +107,18 @@ const useLocation = create<LocationState>((set, get) => ({
                 requiredAccuracy: Location.Accuracy.Low,
                 maxAge: maxAgeLong,
             })
-            console.log('known', knownLoc);
             if (knownLoc) {
                 set({ location: knownLoc, errorMsg: null, loading: false });
                 useStorage.getState().setLastLocation(knownLoc);
             }
 
             // fallback to CurrentLocation async
-            get().fetchCurrentLocation();
+            get().fetchCurrentLocation().then((currentLoc) => {
+                if (currentLoc) {
+                    set({ location: currentLoc, errorMsg: null, loading: false });
+                    useStorage.getState().setLastLocation(currentLoc);
+                }
+            });
         } catch (e) {
             set({ location: null, errorMsg: 'Failed to fetch location', loading: false });
             console.error("[useLocation] Failed to fetch location:", e);
@@ -136,8 +126,14 @@ const useLocation = create<LocationState>((set, get) => ({
     },
 
     refresh: async () => {
-        set(state => ({ ...state, loading: true }));
-        await get().fetchCurrentLocation();
+        set({ loading: true });
+        const currentLoc = await get().fetchCurrentLocation();
+        if (currentLoc) {
+            set({ location: currentLoc, errorMsg: null, loading: false });
+            useStorage.getState().setLastLocation(currentLoc);
+        } else {
+            set({ errorMsg: 'Failed to refresh', loading: false });
+        }
     },
 }));
 
