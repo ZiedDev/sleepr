@@ -1,22 +1,23 @@
 import { useDerivedValue, interpolateColor, interpolate, withTiming, Easing, makeMutable } from 'react-native-reanimated';
 import { DateTime } from 'luxon';
-import { SunLogic, toISODate } from '../db/logic';
+import { SunLogic, toCoordinate, toISODate } from '../db/logic';
 import useLocation from '../hooks/useLocation';
 import { backgroundColorLUT as LUT } from '../constants/colors';
 import { create } from 'zustand';
 import { useStorage } from '../db/storage';
+import { SunTimesRecord } from '../db/types';
 
 interface ColorState {
     progress: { value: number }; // 0 -> 1
     blur: { value: number };
-    initialize: () => Promise<boolean>;
+    initialize: () => Promise<void>;
     setProgress: (value: number, animated?: boolean) => void;
     setProgressByTime: (time: DateTime, animated?: boolean) => Promise<void>;
     setBlur: (amount: number, animated?: boolean) => void;
     refresh: () => Promise<void>;
 }
 
-const updateInterval = 60000; // 60*1000 (ms in 1 minute)
+const updateInterval = 120000; // 2*60*1000 (ms in 2 minutes)
 let intervalId: NodeJS.Timeout | null = null;
 
 const getSunData = async (time: DateTime) => {
@@ -25,49 +26,50 @@ const getSunData = async (time: DateTime) => {
 
     const { sunCache, setSunCache } = useStorage.getState();
 
-    const date = toISODate(time);
-    const lat = location.coords.latitude;
-    const lon = location.coords.longitude;
+    const dateISO = toISODate(time)!;
+    const latCoordinate = toCoordinate(location.coords.latitude)!;
+    const lonCoordinate = toCoordinate(location.coords.longitude)!;
 
     if (
         sunCache &&
-        sunCache.date === date &&
-        sunCache.lat === lat &&
-        sunCache.lon === lon
+        sunCache.date === dateISO &&
+        sunCache.lat === latCoordinate &&
+        sunCache.lon === lonCoordinate
     ) return sunCache;
 
+    // add offline fallback
+
     const sunData = await SunLogic.request({
-        date: time,
-        lat,
-        lon,
+        date: dateISO,
+        lat: latCoordinate,
+        lon: lonCoordinate,
     });
     setSunCache(sunData);
 
     return sunData;
 };
 
-const calculateProgress = async (time: DateTime) => {
-    const sunData = await getSunData(time);
-    if (!sunData) return 0;
-
+const calculateProgress = (time: DateTime, sunData: SunTimesRecord | null) => {
+    if (!sunData) return 2;
     const secondsSinceSunrise = time.diff(DateTime.fromSeconds(sunData.sunrise), 'seconds').seconds;
     return secondsSinceSunrise / sunData.daylength;
 };
 
 const useColorStore = create<ColorState>((set, get) => {
-    const progress = makeMutable(0);
+    const p = calculateProgress(DateTime.now(), useStorage.getState().sunCache);
+    const progress = makeMutable(p);
     const blur = makeMutable(0);
     return {
         progress,
         blur,
 
         initialize: async () => {
-            const p = await calculateProgress(DateTime.now());
-            if (isNaN(p)) return false;
-            get().setProgress(p);
+            const now = DateTime.now();
+            const p = calculateProgress(now, await getSunData(now));
+            get().setProgress(p, true);
+
             if (intervalId) clearInterval(intervalId);
             intervalId = setInterval(() => get().refresh(), updateInterval);
-            return true;
         },
 
         setProgress: (val, animated = true) => {
@@ -81,7 +83,7 @@ const useColorStore = create<ColorState>((set, get) => {
         },
 
         setProgressByTime: async (time, animated = true) => {
-            const p = await calculateProgress(time);
+            const p = calculateProgress(time, await getSunData(time));
             get().setProgress(p, animated);
         },
 
