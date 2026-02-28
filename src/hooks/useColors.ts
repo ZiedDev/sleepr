@@ -112,7 +112,7 @@ const getSunData = async (time: DateTime): Promise<SunTimesRecord | null> => {
             return sunRequest;
         }
     } catch (e) {
-        console.error("[useColors] SunData request failed or timed out. Falling back to offline math.", e);
+        console.warn("[useColors] SunData request failed or timed out. Falling back to offline math.", e);
     }
 
     return sunOffline;
@@ -151,7 +151,7 @@ const useColorStore = create<ColorState>((set, get) => {
                 withTiming(amount, { duration: 500, easing: Easing.linear }) : amount;
         },
 
-        setProgressByTime: async (time, animated = false) => {
+        setProgressByTime: async (time, animated = true) => {
             const p = calculateProgress(time, await getSunData(time));
             get().setProgress(p, animated);
         },

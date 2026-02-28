@@ -28,7 +28,7 @@ const useLocation = create<LocationState>((set, get) => ({
                 accuracy: Location.Accuracy.Low
             });
         } catch (e) {
-            console.error("[useLocation] Failed to fetch current location:", e);
+            console.warn("[useLocation] Failed to fetch current location:", e);
             return null;
         }
     },
@@ -80,7 +80,7 @@ const useLocation = create<LocationState>((set, get) => ({
             return offsetLoc;
 
         } catch (e) {
-            console.error("[useLocation] Failed to fetch offline location:", e);
+            console.warn("[useLocation] Failed to fetch offline location:", e);
             return null;
         }
     },
@@ -96,8 +96,8 @@ const useLocation = create<LocationState>((set, get) => ({
             if (currentStatus === 'undetermined')
                 currentStatus = (await Location.requestForegroundPermissionsAsync()).status;
             if (currentStatus !== 'granted') {
-                console.error("[useLocation] Permission denied");
-                return;
+                console.warn("[useLocation] Permission denied");
+                return
             }
 
             // POST PERMISSION REQUEST
@@ -118,7 +118,7 @@ const useLocation = create<LocationState>((set, get) => ({
             get().fetchCurrentLocation().then(loc => loc && updateLocationState(loc));
         } catch (e) {
             set({ location: null, errorMsg: 'Failed to fetch location', loading: false });
-            console.error("[useLocation] Failed to fetch location:", e);
+            console.warn("[useLocation] Failed to fetch location:", e);
         }
     },
 
