@@ -102,23 +102,20 @@ const useLocation = create<LocationState>((set, get) => ({
 
             // POST PERMISSION REQUEST
 
+            const updateLocationState = (loc: Location.LocationObject) => {
+                set({ location: loc, errorMsg: null, loading: false });
+                useStorage.getState().setLastLocation(loc);
+            };
+
             // await LastKnownPosition (maxAgeLong)
             const knownLoc = await Location.getLastKnownPositionAsync({
                 requiredAccuracy: Location.Accuracy.Low,
                 maxAge: maxAgeLong,
             })
-            if (knownLoc) {
-                set({ location: knownLoc, errorMsg: null, loading: false });
-                useStorage.getState().setLastLocation(knownLoc);
-            }
+            if (knownLoc) updateLocationState(knownLoc);
 
             // fallback to CurrentLocation async
-            get().fetchCurrentLocation().then((currentLoc) => {
-                if (currentLoc) {
-                    set({ location: currentLoc, errorMsg: null, loading: false });
-                    useStorage.getState().setLastLocation(currentLoc);
-                }
-            });
+            get().fetchCurrentLocation().then(loc => loc && updateLocationState(loc));
         } catch (e) {
             set({ location: null, errorMsg: 'Failed to fetch location', loading: false });
             console.error("[useLocation] Failed to fetch location:", e);
