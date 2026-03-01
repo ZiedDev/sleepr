@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Dimensions, Pressable, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { useAnimatedProps, useSharedValue, useAnimatedStyle, SharedValue, withSpring, withTiming, interpolate, interpolateColor, Extrapolation, Easing, withDecay } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, interpolate, interpolateColor, Extrapolation, Easing } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { scheduleOnRN } from 'react-native-worklets';
-
+// TODO: Haptics
 const TRACK_WIDTH = 320;
 const TRACK_HEIGHT = 64;
 const THUMB_SIZE = 56;
@@ -38,11 +38,10 @@ export default function MorphSlider() {
             duration: 200,
             easing: Easing.out(Easing.back(1.8)),
         }, () => {
-            translateX.value = withTiming(0);
-            morphWidth.value = withTiming(BUTTON_WIDTH);
-            isFinished.value = withTiming(1);
+            translateX.value = withTiming(0, { easing: Easing.out(Easing.poly(3)) });
+            morphWidth.value = withTiming(BUTTON_WIDTH, { easing: Easing.out(Easing.poly(3)) });
+            isFinished.value = withTiming(1, { easing: Easing.out(Easing.poly(3)) });
             scheduleOnRN(setCompleted, true);
-            // { duration: 400, easing: Easing.out(Easing.poly(4)) }
         })
     };
 
@@ -58,8 +57,10 @@ export default function MorphSlider() {
         .enabled(!completed)
         .minDistance(4)
         .onUpdate((event) => {
-            // const resistedX = event.translationX * 0.5; // TODO: add dynamic resistance
-            translateX.value = Math.max(0, Math.min(event.translationX, maxX));
+            const progress = translateX.value / maxX;
+            // const resistance = 1 - (progress * 0.5);
+            const resistance = 1 - Math.pow(progress, 3) * 0.15;
+            translateX.value = Math.max(0, Math.min(event.translationX * resistance, maxX));
         })
         .onEnd((event) => {
             if (translateX.value > maxX * 0.8) {
@@ -97,7 +98,12 @@ export default function MorphSlider() {
     }));
 
     const trackStyle = useAnimatedStyle(() => ({
-        width: withTiming(isFinished.value === 1 ? BUTTON_WIDTH + PADDING * 2 : TRACK_WIDTH),
+        width: interpolate(
+            morphWidth.value,
+            [THUMB_SIZE, BUTTON_WIDTH],
+            [TRACK_WIDTH, BUTTON_WIDTH + PADDING * 2],
+            Extrapolation.CLAMP
+        )
     }));
 
     return (

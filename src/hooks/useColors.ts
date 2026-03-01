@@ -139,7 +139,7 @@ const useColorStore = create<ColorState>((set, get) => {
             get().setProgress(p, true);
 
             if (intervalId) clearInterval(intervalId);
-            intervalId = setInterval(() => get().refresh(), updateInterval);
+            intervalId = setInterval(() => get().setProgressByTime(DateTime.now()), updateInterval);
         },
 
         setProgress: (val, animated = true) => {
