@@ -202,10 +202,12 @@ export default function ClockSlider({
                 const normalizedAngle = (quantizedAngle + 2 * Math.PI) % (2 * Math.PI);
 
                 const diff = signedAngleDelta(midAngle.value, normalizedAngle);
-                startAngle.value = (startAngle.value + diff) % (2 * Math.PI);
-                endAngle.value = (endAngle.value + diff) % (2 * Math.PI);
-                midAngle.value = normalizedAngle;
-                handleUpdate(startAngle.value, endAngle.value);
+                if (diff !== 0) {
+                    startAngle.value = (startAngle.value + diff) % (2 * Math.PI);
+                    endAngle.value = (endAngle.value + diff) % (2 * Math.PI);
+                    midAngle.value = normalizedAngle;
+                    handleUpdate(startAngle.value, endAngle.value);
+                }
             }
         })
         .onEnd(() => {

@@ -30,10 +30,9 @@ export default function NavBar({
   navState: NavState;
   setNavState: React.Dispatch<React.SetStateAction<NavState>>;
 }) {
-  const selectedIndex = useSharedValue(
-    navOptions.findIndex(n => n.key === navState)
-  );
-  const translationX = useSharedValue(0);
+  const i = navOptions.findIndex(n => n.key === navState);
+  const selectedIndex = useSharedValue(i);
+  const translationX = useSharedValue(BUTTON_WIDTH * i);
 
   useEffect(() => {
     selectedIndex.value = navOptions.findIndex(n => n.key === navState);
@@ -47,7 +46,9 @@ export default function NavBar({
     GestureStateChangeEvent<PanGestureHandlerEventPayload> |
     GestureUpdateEvent<PanGestureHandlerEventPayload>) => {
 
-    selectedIndex.value = Math.min(Math.max(0, (event.x - BUTTON_WIDTH / 2) / BUTTON_WIDTH), (navOptions.length - 1));
+    const t = Math.min(Math.max(0, (event.x - BUTTON_WIDTH / 2) / BUTTON_WIDTH), (navOptions.length - 1));
+    const x = t - Math.floor(t);
+    selectedIndex.value = Math.floor(t) + (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
 
     translationX.value = withSpring(Math.min(Math.max(0, event.x - BUTTON_WIDTH / 2), BUTTON_WIDTH * (navOptions.length - 1)), {
       damping: 20,
@@ -90,7 +91,7 @@ export default function NavBar({
 
         <View style={styles.navSelectorContainer}>
           {/* Selector */}
-          <Animated.View style={[styles.navSelector, selectorStyle]}/>
+          <Animated.View style={[styles.navSelector, selectorStyle]} />
         </View>
       </View>
     </GestureDetector>
@@ -155,7 +156,7 @@ const NavButton = ({ label, Icon, index, selectedIndex, onPress }: {
 }
 
 const styles = StyleSheet.create({
-  gestureContainer : {
+  gestureContainer: {
     position: "absolute",
     bottom: 0,
     width: width - HORIZONTAL_PADDING,
