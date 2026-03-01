@@ -4,7 +4,8 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, interpolate, interpolateColor, Extrapolation, Easing } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { scheduleOnRN } from 'react-native-worklets';
-// TODO: Haptics
+
+// add props
 const TRACK_WIDTH = 320;
 const TRACK_HEIGHT = 64;
 const THUMB_SIZE = 56;
@@ -40,15 +41,16 @@ export default function MorphSlider() {
         }, () => {
             translateX.value = withTiming(0, { easing: Easing.out(Easing.poly(3)) });
             morphWidth.value = withTiming(BUTTON_WIDTH, { easing: Easing.out(Easing.poly(3)) });
-            isFinished.value = withTiming(1, { easing: Easing.out(Easing.poly(3)) });
+            isFinished.value = withTiming(1, { duration: 50, easing: Easing.out(Easing.poly(4)) });
             scheduleOnRN(setCompleted, true);
+            scheduleOnRN(Haptics.notificationAsync, Haptics.NotificationFeedbackType.Success);
         })
     };
 
     const morphToThumb = () => {
         'worklet';
-        isFinished.value = withTiming(0);
         morphWidth.value = withTiming(THUMB_SIZE);
+        isFinished.value = withTiming(0, { duration: 50, easing: Easing.out(Easing.poly(4)) });
         scheduleOnRN(setCompleted, false);
 
     };
@@ -58,8 +60,7 @@ export default function MorphSlider() {
         .minDistance(4)
         .onUpdate((event) => {
             const progress = translateX.value / maxX;
-            // const resistance = 1 - (progress * 0.5);
-            const resistance = 1 - Math.pow(progress, 3) * 0.15;
+            const resistance = 1 - 0.00279860405457 * (Math.exp(4 * progress) - 1);
             translateX.value = Math.max(0, Math.min(event.translationX * resistance, maxX));
         })
         .onEnd((event) => {
@@ -74,14 +75,14 @@ export default function MorphSlider() {
         transform: [{ translateX: translateX.value }],
         width: morphWidth.value,
         backgroundColor: interpolateColor(
-            isFinished.value,
-            [0, 1],
+            morphWidth.value,
+            [THUMB_SIZE, BUTTON_WIDTH],
             ['#f0f8ff', '#4caf50']
         ),
     }));
 
     const vignetteStyle = useAnimatedStyle(() => ({
-        opacity: interpolate( // TODO: add bezier
+        opacity: interpolate( // TODO: add  blur + change bezier
             translateX.value,
             [0, maxX],
             [0, 0.85],
@@ -91,6 +92,11 @@ export default function MorphSlider() {
 
     const thumbTextStyle = useAnimatedStyle(() => ({
         opacity: withTiming(isFinished.value === 0 ? 1 : 0),
+        color: interpolateColor(
+            isFinished.value,
+            [0, 1],
+            ['#000', '#4caf50']
+        )
     }));
 
     const buttonTextStyle = useAnimatedStyle(() => ({
@@ -109,7 +115,7 @@ export default function MorphSlider() {
     return (
         <Animated.View style={[styles.track, trackStyle]}>
             <GestureDetector gesture={pan}>
-                <Pressable onPress={() => { if (completed) morphToThumb(); }}>
+                <Pressable onPress={() => { if (completed) { morphToThumb(); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning) } }}>
                     <Animated.View style={[styles.morph, animatedMorphStyle]}>
                         <Animated.Text style={[styles.thumbText, thumbTextStyle]}>➜</Animated.Text>
                         <Animated.Text style={[styles.buttonText, buttonTextStyle]}>Click Me</Animated.Text>
@@ -138,7 +144,6 @@ const styles = StyleSheet.create({
     thumbText: {
         position: 'absolute',
         fontSize: 22,
-        color: '#000',
     },
     buttonText: {
         position: 'absolute',
