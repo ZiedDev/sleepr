@@ -75,7 +75,7 @@ const BackgroundArt = memo(({ width = 200, colors }: {
       <Group transform={[{ scale }]}>
 
         {/* Sky Background */}
-        <Rect x={1.16} y={0} width={1199} height={1197.24}>
+        <Rect x={0} y={0} width={1199} height={1197.24}>
           <RadialGradient colors={sky} transform={skyPos}
             c={vec(1031.78, 329.03)}
             r={540.28}
@@ -150,7 +150,7 @@ const BackgroundArt = memo(({ width = 200, colors }: {
 
         {/* Water */}
         <Group>
-          <Rect x={1.16} y={924.6} width={1199} height={272.64}>
+          <Rect x={0} y={924.6} width={1199} height={272.64}>
             <LinearGradient colors={waterBackground}
               start={vec(600.66, 1197.24)}
               end={vec(600.66, 924.6)}
@@ -287,7 +287,7 @@ const BackgroundArt = memo(({ width = 200, colors }: {
 
       </Group>
       
-      { blur ?  (<BackdropBlur blur={blur} transform={[{ scale }]} clip={{x: 0, y: 0, width: ORIGINAL_WIDTH, height: ORIGINAL_HEIGHT}} />) : (<></>)}
+      { blur ?  (<BackdropBlur blur={blur} transform={[{ scale }]} />) : (<></>)}
     </Canvas>
   );
 });

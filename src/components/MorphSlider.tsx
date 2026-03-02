@@ -4,8 +4,9 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, interpolate, interpolateColor, Extrapolation, Easing } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { scheduleOnRN } from 'react-native-worklets';
+import useColorStore from '../hooks/useColors';
 
-// add props
+// TODO:  add props
 const TRACK_WIDTH = 320;
 const TRACK_HEIGHT = 64;
 const THUMB_SIZE = 56;
@@ -22,15 +23,14 @@ export default function MorphSlider() {
     const translateX = useSharedValue(0);
     const morphWidth = useSharedValue(THUMB_SIZE);
     const isFinished = useSharedValue(0);
+    const blur = useColorStore(state => state.blur);
 
     const maxX = TRACK_WIDTH - THUMB_SIZE - (PADDING * 2);
 
     const resetSlider = () => {
         'worklet';
-        translateX.value = withTiming(0, {
-            duration: 400,
-            easing: Easing.out(Easing.cubic),
-        })
+        translateX.value = withTiming(0, { duration: 400, easing: Easing.out(Easing.cubic) });
+        blur.value = withTiming(0, { duration: 1000, easing: Easing.out(Easing.cubic) });
     };
 
     const morphToButton = () => {
@@ -51,8 +51,8 @@ export default function MorphSlider() {
         'worklet';
         morphWidth.value = withTiming(THUMB_SIZE);
         isFinished.value = withTiming(0, { duration: 50, easing: Easing.out(Easing.poly(4)) });
+        blur.value = withTiming(0, { duration: 700 });
         scheduleOnRN(setCompleted, false);
-
     };
 
     const pan = Gesture.Pan()
@@ -60,8 +60,10 @@ export default function MorphSlider() {
         .minDistance(4)
         .onUpdate((event) => {
             const progress = translateX.value / maxX;
-            const resistance = 1 - 0.00279860405457 * (Math.exp(4 * progress) - 1);
+            const resistance = 1 - 0.00373147207275 * (Math.exp(4 * progress) - 1);
             translateX.value = Math.max(0, Math.min(event.translationX * resistance, maxX));
+
+            blur.value = 30 * Easing.in(Easing.cubic)(progress);
         })
         .onEnd((event) => {
             if (translateX.value > maxX * 0.8) {
@@ -78,15 +80,6 @@ export default function MorphSlider() {
             morphWidth.value,
             [THUMB_SIZE, BUTTON_WIDTH],
             ['#f0f8ff', '#4caf50']
-        ),
-    }));
-
-    const vignetteStyle = useAnimatedStyle(() => ({
-        opacity: interpolate( // TODO: add  blur + change bezier
-            translateX.value,
-            [0, maxX],
-            [0, 0.85],
-            Extrapolation.CLAMP
         ),
     }));
 

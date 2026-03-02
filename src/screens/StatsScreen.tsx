@@ -16,11 +16,9 @@ export default function StatsScreen() {
     setRefreshing(false);
   }, []);
 
-  if (['android', 'web'].includes(Platform.OS)) {
-    useEffect(() => {
-      useColorStore.getState().setBlur(15);
-    }, []);
-  }
+  useEffect(() => {
+    useColorStore.getState().setBlur(15);
+  }, []);
 
   return (
     <View style={styles.container}>
