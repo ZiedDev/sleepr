@@ -12,6 +12,8 @@ import { initDB } from "./src/db/logic";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useStorage } from "./src/db/storage";
+import { useSharedValue } from "react-native-reanimated";
 
 export default function App() {
   useEffect(() => {
@@ -39,8 +41,11 @@ export default function App() {
 function AppContent() {
   const [navState, setNavState] = useState<"Home" | "Statistics" | "Settings">('Home');
 
+  const currentSession = useStorage((state) => state.currentSession);
+  const progress = useSharedValue(currentSession ? 1 : 0);
+
   const page = {
-    "Home": <HomeScreen />,
+    "Home": <HomeScreen progress={progress} />,
     "Statistics": <StatsScreen />,
     "Settings": <SettingsScreen />
   }
@@ -53,7 +58,7 @@ function AppContent() {
     <>
       <View style={{ flex: 1, marginTop, marginBottom }}>
         {page[navState]}
-        <NavBar navState={navState} setNavState={setNavState} />
+        <NavBar navState={navState} setNavState={setNavState} progress={progress} />
       </View>
     </>
   );

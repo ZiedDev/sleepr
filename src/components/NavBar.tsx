@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, Dimensions, Button } from 'react-native';
-import Animated, { cubicBezier, interpolateColor, useDerivedValue, useSharedValue, withTiming, Easing, useAnimatedStyle, SharedValue, withSpring } from 'react-native-reanimated';
+import Animated, { cubicBezier, interpolateColor, useDerivedValue, useSharedValue, withTiming, Easing, useAnimatedStyle, SharedValue, withSpring, interpolate, Extrapolation } from 'react-native-reanimated';
 import SafeBlurView from './SafeBlurView';
 import PhMoonBold from '../../assets/svgs/PhMoonBold';
 import PhChartBarBold from '../../assets/svgs/PhChartBarBold';
@@ -23,12 +23,10 @@ const BUTTON_WIDTH = (width - HORIZONTAL_PADDING - 8) / navOptions.length;
 const BUTTON_HEIGHT = 82;
 const AnimatedText = Animated.createAnimatedComponent(Text);
 
-export default function NavBar({
-  navState,
-  setNavState,
-}: {
+export default function NavBar({ navState, setNavState, progress }: {
   navState: NavState;
   setNavState: React.Dispatch<React.SetStateAction<NavState>>;
+  progress: SharedValue<number>;
 }) {
   const i = navOptions.findIndex(n => n.key === navState);
   const selectedIndex = useSharedValue(i);
@@ -41,6 +39,26 @@ export default function NavBar({
   const selectorStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: translationX.value }],
   }));
+
+  const animatedContainerStyle = useAnimatedStyle(() => {
+    const easedValue = Easing.out(Easing.cubic)(progress.value);
+    return {
+      opacity: interpolate(
+        easedValue,
+        [0, 1],
+        [1, 0],
+        Extrapolation.CLAMP
+      ),
+      transform: [{
+        translateY: interpolate(
+          easedValue,
+          [0, 1],
+          [0, 100],
+          Extrapolation.CLAMP
+        ),
+      }],
+    };
+  });
 
   const handleGesture = (event:
     GestureStateChangeEvent<PanGestureHandlerEventPayload> |
@@ -75,7 +93,7 @@ export default function NavBar({
 
   return (
     <GestureDetector gesture={pan}>
-      <View style={styles.gestureContainer}>
+      <Animated.View style={[styles.gestureContainer, animatedContainerStyle]}>
         <SafeBlurView style={styles.container} intensity={15}>
 
           {/* Nav Buttons */}
@@ -93,7 +111,7 @@ export default function NavBar({
           {/* Selector */}
           <Animated.View style={[styles.navSelector, selectorStyle]} />
         </View>
-      </View>
+      </Animated.View>
     </GestureDetector>
   );
 }
