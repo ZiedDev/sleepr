@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, interpolate, interpolateColor, Extrapolation, Easing } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, interpolate, interpolateColor, Extrapolation, Easing, SharedValue } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { scheduleOnRN } from 'react-native-worklets';
-import useColorStore from '../hooks/useColors';
 
 interface MorphSliderProps {
     trackWidth?: number;
@@ -26,6 +25,7 @@ interface MorphSliderProps {
     onReset?: () => void;
 
     isInitialComplete?: boolean;
+    progress?:SharedValue<number>;
 }
 
 export default function MorphSlider({
@@ -48,21 +48,21 @@ export default function MorphSlider({
     onReset,
 
     isInitialComplete = false,
+    progress = useSharedValue(Number(isInitialComplete)),
+
 }: MorphSliderProps) {
     const [completed, setCompleted] = useState(isInitialComplete);
 
     const translateX = useSharedValue(Number(isInitialComplete));
     const morphWidth = useSharedValue(isInitialComplete ? buttonWidth : thumbSize);
-    const isFinished = useSharedValue(Number(isInitialComplete));
-
-    const blur = useColorStore(state => state.blur);
+    const inAnimFinish = useSharedValue(Number(isInitialComplete));
 
     const maxX = trackWidth - thumbSize - (padding * 2);
 
     const resetSlider = () => {
         'worklet';
         translateX.value = withTiming(0, { duration: 400, easing: Easing.out(Easing.cubic) });
-        blur.value = withTiming(0, { duration: 1000, easing: Easing.out(Easing.cubic) });
+        progress.value = withTiming(0, { duration: 1000, easing: Easing.out(Easing.cubic) });
     };
 
     const morphToButton = () => {
@@ -73,7 +73,7 @@ export default function MorphSlider({
         }, () => {
             translateX.value = withTiming(0, { easing: Easing.out(Easing.poly(3)) });
             morphWidth.value = withTiming(buttonWidth, { easing: Easing.out(Easing.poly(3)) });
-            isFinished.value = withTiming(1, { duration: 50, easing: Easing.out(Easing.poly(4)) });
+            inAnimFinish.value = withTiming(1, { duration: 50, easing: Easing.out(Easing.poly(4)) });
             scheduleOnRN(setCompleted, true);
             scheduleOnRN(Haptics.notificationAsync, Haptics.NotificationFeedbackType.Success);
             if (onComplete) scheduleOnRN(onComplete);
@@ -83,8 +83,8 @@ export default function MorphSlider({
     const morphToThumb = () => {
         'worklet';
         morphWidth.value = withTiming(thumbSize);
-        isFinished.value = withTiming(0, { duration: 50, easing: Easing.out(Easing.poly(4)) });
-        blur.value = withTiming(0, { duration: 700 });
+        inAnimFinish.value = withTiming(0, { duration: 50, easing: Easing.out(Easing.poly(4)) });
+        progress.value = withTiming(0, { duration: 700 });
         scheduleOnRN(setCompleted, false);
         if (onReset) scheduleOnRN(onReset);
     };
@@ -93,11 +93,11 @@ export default function MorphSlider({
         .enabled(!completed)
         .minDistance(4)
         .onUpdate((event) => {
-            const progress = translateX.value / maxX;
-            const resistance = 1 - 0.00373147207275 * (Math.exp(4 * progress) - 1);
+            const t = translateX.value / maxX;
+            const resistance = 1 - 0.00373147207275 * (Math.exp(4 * t) - 1);
             translateX.value = Math.max(0, Math.min(event.translationX * resistance, maxX));
 
-            blur.value = 30 * Easing.in(Easing.cubic)(progress);
+            progress.value = 30 * Easing.in(Easing.cubic)(t);
         })
         .onEnd((event) => {
             if (translateX.value > maxX * 0.8) {
@@ -118,16 +118,16 @@ export default function MorphSlider({
     }));
 
     const thumbTextStyle = useAnimatedStyle(() => ({
-        opacity: withTiming(isFinished.value === 0 ? 1 : 0),
+        opacity: withTiming(inAnimFinish.value === 0 ? 1 : 0),
         color: interpolateColor(
-            isFinished.value,
+            inAnimFinish.value,
             [0, 1],
             [thumbTextColor, buttonColor]
         )
     }));
 
     const buttonTextStyle = useAnimatedStyle(() => ({
-        opacity: withTiming(isFinished.value === 1 ? 1 : 0),
+        opacity: withTiming(inAnimFinish.value === 1 ? 1 : 0),
     }));
 
     const trackStyle = useAnimatedStyle(() => ({
