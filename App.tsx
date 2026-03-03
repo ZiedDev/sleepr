@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import HomeScreen from "./src/screens/HomeScreen";
 import NavBar from "./src/components/NavBar";
-import { View, StyleSheet, Dimensions } from "react-native";
+import { View, StyleSheet, Platform } from "react-native";
 import SettingsScreen from "./src/screens/SettingsScreen";
 import StatsScreen from "./src/screens/StatsScreen";
 import BackgroundScreen from "./src/screens/BackgroundScreen";
@@ -11,11 +11,9 @@ import useColorStore from "./src/hooks/useColors";
 import { initDB } from "./src/db/logic";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { StatusBar } from "expo-status-bar";
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function App() {
-  const [navState, setNavState] = useState<"Home" | "Statistics" | "Settings">('Home');
-
-
   useEffect(() => {
     const setup = async () => {
       await initDB();
@@ -25,34 +23,42 @@ export default function App() {
     setup();
   }, []);
 
+  return (
+    <SafeAreaProvider>
+      <SkiaProvider>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <StatusBar style='light' translucent />
+          <BackgroundScreen />
+          <AppContent />
+        </GestureHandlerRootView>
+      </SkiaProvider>
+    </SafeAreaProvider>
+  );
+}
+
+function AppContent() {
+  const [navState, setNavState] = useState<"Home" | "Statistics" | "Settings">('Home');
+
   const page = {
     "Home": <HomeScreen />,
     "Statistics": <StatsScreen />,
     "Settings": <SettingsScreen />
   }
 
+  const insets = useSafeAreaInsets();
+  const marginTop = insets.top || (Platform.OS === 'android' ? 24 : 65);
+  const marginBottom = insets.bottom || (Platform.OS === 'android' ? 24 : 34);
+
   return (
     <>
-      <SkiaProvider>
-        <GestureHandlerRootView>
-          <StatusBar style='light' translucent />
-          <BackgroundScreen />
-          <View style={styles.margins}>
-            {page[navState]}
-            <NavBar navState={navState} setNavState={setNavState} />
-          </View>
-        </GestureHandlerRootView>
-      </SkiaProvider>
+      <View style={{ flex: 1, marginTop, marginBottom }}>
+        {page[navState]}
+        <NavBar navState={navState} setNavState={setNavState} />
+      </View>
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  margins: {
-    height: Dimensions.get("window").height - 99,
-    width: Dimensions.get("window").width,
-    marginTop: 65,
-    marginBottom: 34,
-    position: "relative",
-  },
+
 });
