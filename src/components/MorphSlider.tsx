@@ -97,7 +97,7 @@ export default function MorphSlider({
             const resistance = 1 - 0.00373147207275 * (Math.exp(4 * t) - 1);
             translateX.value = Math.max(0, Math.min(event.translationX * resistance, maxX));
 
-            progress.value = 30 * Easing.in(Easing.cubic)(t);
+            progress.value = t;
         })
         .onEnd((event) => {
             if (translateX.value > maxX * 0.8) {

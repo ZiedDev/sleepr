@@ -5,12 +5,12 @@ import { View, StyleSheet, Dimensions } from "react-native";
 import SettingsScreen from "./src/screens/SettingsScreen";
 import StatsScreen from "./src/screens/StatsScreen";
 import BackgroundScreen from "./src/screens/BackgroundScreen";
-import { useSharedValue } from "react-native-reanimated";
 import { SkiaProvider } from "./SkiaProvider";
 import useLocation from "./src/hooks/useLocation";
 import useColorStore from "./src/hooks/useColors";
 import { initDB } from "./src/db/logic";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { StatusBar } from "expo-status-bar";
 
 export default function App() {
   const [navState, setNavState] = useState<"Home" | "Statistics" | "Settings">('Home');
@@ -35,6 +35,7 @@ export default function App() {
     <>
       <SkiaProvider>
         <GestureHandlerRootView>
+          <StatusBar style='light' translucent />
           <BackgroundScreen />
           <View style={styles.margins}>
             {page[navState]}
