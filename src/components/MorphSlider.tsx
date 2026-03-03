@@ -4,33 +4,54 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, interpolate, interpolateColor, Extrapolation, Easing } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { scheduleOnRN } from 'react-native-worklets';
+import useColorStore from '../hooks/useColors';
 
-// add props
-const TRACK_WIDTH = 320;
-const TRACK_HEIGHT = 64;
-const THUMB_SIZE = 56;
-const BUTTON_WIDTH = 200;
-const PADDING = 4;
+interface MorphSliderProps {
+    trackWidth?: number;
+    trackHeight?: number;
+    thumbSize?: number;
+    buttonWidth?: number;
+    padding?: number;
 
-interface MorphSlider {
+    trackColor?: string;
+    thumbColor?: string;
+    thumbTextColor?: string;
+    buttonColor?: string;
+    buttonTextColor?: string;
 
+    onComplete?: () => void;
+    onReset?: () => void;
 }
 
-export default function MorphSlider() {
+export default function MorphSlider({
+    trackWidth = 320,
+    trackHeight = 64,
+    thumbSize = 56,
+    buttonWidth = 200,
+    padding = 4,
+
+    trackColor = "#222222",
+    thumbColor = "#f0f8ff",
+    thumbTextColor = "#000",
+    buttonColor = "#4caf50",
+    buttonTextColor = "#fff",
+
+    onComplete,
+    onReset
+}: MorphSliderProps) {
     const [completed, setCompleted] = useState(false);
 
     const translateX = useSharedValue(0);
-    const morphWidth = useSharedValue(THUMB_SIZE);
+    const morphWidth = useSharedValue(thumbSize);
     const isFinished = useSharedValue(0);
+    const blur = useColorStore(state => state.blur);
 
-    const maxX = TRACK_WIDTH - THUMB_SIZE - (PADDING * 2);
+    const maxX = trackWidth - thumbSize - (padding * 2);
 
     const resetSlider = () => {
         'worklet';
-        translateX.value = withTiming(0, {
-            duration: 400,
-            easing: Easing.out(Easing.cubic),
-        })
+        translateX.value = withTiming(0, { duration: 400, easing: Easing.out(Easing.cubic) });
+        blur.value = withTiming(0, { duration: 1000, easing: Easing.out(Easing.cubic) });
     };
 
     const morphToButton = () => {
@@ -40,19 +61,21 @@ export default function MorphSlider() {
             easing: Easing.out(Easing.back(1.8)),
         }, () => {
             translateX.value = withTiming(0, { easing: Easing.out(Easing.poly(3)) });
-            morphWidth.value = withTiming(BUTTON_WIDTH, { easing: Easing.out(Easing.poly(3)) });
+            morphWidth.value = withTiming(buttonWidth, { easing: Easing.out(Easing.poly(3)) });
             isFinished.value = withTiming(1, { duration: 50, easing: Easing.out(Easing.poly(4)) });
             scheduleOnRN(setCompleted, true);
             scheduleOnRN(Haptics.notificationAsync, Haptics.NotificationFeedbackType.Success);
+            if (onComplete) scheduleOnRN(onComplete);
         })
     };
 
     const morphToThumb = () => {
         'worklet';
-        morphWidth.value = withTiming(THUMB_SIZE);
+        morphWidth.value = withTiming(thumbSize);
         isFinished.value = withTiming(0, { duration: 50, easing: Easing.out(Easing.poly(4)) });
+        blur.value = withTiming(0, { duration: 700 });
         scheduleOnRN(setCompleted, false);
-
+        if (onReset) scheduleOnRN(onReset);
     };
 
     const pan = Gesture.Pan()
@@ -60,8 +83,10 @@ export default function MorphSlider() {
         .minDistance(4)
         .onUpdate((event) => {
             const progress = translateX.value / maxX;
-            const resistance = 1 - 0.00279860405457 * (Math.exp(4 * progress) - 1);
+            const resistance = 1 - 0.00373147207275 * (Math.exp(4 * progress) - 1);
             translateX.value = Math.max(0, Math.min(event.translationX * resistance, maxX));
+
+            blur.value = 30 * Easing.in(Easing.cubic)(progress);
         })
         .onEnd((event) => {
             if (translateX.value > maxX * 0.8) {
@@ -76,17 +101,8 @@ export default function MorphSlider() {
         width: morphWidth.value,
         backgroundColor: interpolateColor(
             morphWidth.value,
-            [THUMB_SIZE, BUTTON_WIDTH],
-            ['#f0f8ff', '#4caf50']
-        ),
-    }));
-
-    const vignetteStyle = useAnimatedStyle(() => ({
-        opacity: interpolate( // TODO: add  blur + change bezier
-            translateX.value,
-            [0, maxX],
-            [0, 0.85],
-            Extrapolation.CLAMP
+            [thumbSize, buttonWidth],
+            [thumbColor, buttonColor]
         ),
     }));
 
@@ -95,7 +111,7 @@ export default function MorphSlider() {
         color: interpolateColor(
             isFinished.value,
             [0, 1],
-            ['#000', '#4caf50']
+            [thumbTextColor, buttonColor]
         )
     }));
 
@@ -106,19 +122,36 @@ export default function MorphSlider() {
     const trackStyle = useAnimatedStyle(() => ({
         width: interpolate(
             morphWidth.value,
-            [THUMB_SIZE, BUTTON_WIDTH],
-            [TRACK_WIDTH, BUTTON_WIDTH + PADDING * 2],
+            [thumbSize, buttonWidth],
+            [trackWidth, buttonWidth + padding * 2],
             Extrapolation.CLAMP
         )
     }));
 
     return (
-        <Animated.View style={[styles.track, trackStyle]}>
+        <Animated.View style={[
+            styles.track,
+            trackStyle,
+            {
+                height: trackHeight,
+                backgroundColor: trackColor,
+                borderRadius: trackHeight / 2,
+                paddingHorizontal: padding
+            }
+        ]}>
             <GestureDetector gesture={pan}>
                 <Pressable onPress={() => { if (completed) { morphToThumb(); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning) } }}>
-                    <Animated.View style={[styles.morph, animatedMorphStyle]}>
+                    <Animated.View style={[
+                        styles.morph,
+                        animatedMorphStyle,
+                        { height: thumbSize, borderRadius: thumbSize / 2 }
+                    ]}>
                         <Animated.Text style={[styles.thumbText, thumbTextStyle]}>➜</Animated.Text>
-                        <Animated.Text style={[styles.buttonText, buttonTextStyle]}>Click Me</Animated.Text>
+                        <Animated.Text style={[
+                            styles.buttonText,
+                            buttonTextStyle,
+                            { color: buttonTextColor }
+                        ]}>Click Me</Animated.Text>
                     </Animated.View>
                 </Pressable>
             </GestureDetector>
@@ -128,16 +161,11 @@ export default function MorphSlider() {
 
 const styles = StyleSheet.create({
     track: {
-        height: TRACK_HEIGHT,
         backgroundColor: "#222222",
-        borderRadius: TRACK_HEIGHT / 2,
         justifyContent: 'center',
-        paddingHorizontal: PADDING,
         overflow: 'hidden',
     },
     morph: {
-        height: THUMB_SIZE,
-        borderRadius: THUMB_SIZE / 2,
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -149,6 +177,5 @@ const styles = StyleSheet.create({
         position: 'absolute',
         fontSize: 18,
         fontWeight: '600',
-        color: '#fff',
     },
 });
