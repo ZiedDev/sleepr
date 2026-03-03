@@ -20,7 +20,7 @@ export default function HomeScreen() {
     <View style={styles.container}>
       <StatusBar style="light" />
       <MorphSlider
-        // TODO: assert initial state
+        isInitialComplete={isTracking}
         onComplete={() => {
           const location = useLocation.getState().location;
           const lat = location?.coords.latitude ?? null;

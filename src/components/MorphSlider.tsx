@@ -19,8 +19,13 @@ interface MorphSliderProps {
     buttonColor?: string;
     buttonTextColor?: string;
 
+    thumbText?: string;
+    buttonText?: string;
+
     onComplete?: () => void;
     onReset?: () => void;
+
+    isInitialComplete?: boolean;
 }
 
 export default function MorphSlider({
@@ -36,14 +41,20 @@ export default function MorphSlider({
     buttonColor = "#4caf50",
     buttonTextColor = "#fff",
 
-    onComplete,
-    onReset
-}: MorphSliderProps) {
-    const [completed, setCompleted] = useState(false);
+    thumbText = "➜",
+    buttonText = "Click Me",
 
-    const translateX = useSharedValue(0);
-    const morphWidth = useSharedValue(thumbSize);
-    const isFinished = useSharedValue(0);
+    onComplete,
+    onReset,
+
+    isInitialComplete = false,
+}: MorphSliderProps) {
+    const [completed, setCompleted] = useState(isInitialComplete);
+
+    const translateX = useSharedValue(Number(isInitialComplete));
+    const morphWidth = useSharedValue(isInitialComplete ? buttonWidth : thumbSize);
+    const isFinished = useSharedValue(Number(isInitialComplete));
+
     const blur = useColorStore(state => state.blur);
 
     const maxX = trackWidth - thumbSize - (padding * 2);
@@ -146,12 +157,12 @@ export default function MorphSlider({
                         animatedMorphStyle,
                         { height: thumbSize, borderRadius: thumbSize / 2 }
                     ]}>
-                        <Animated.Text style={[styles.thumbText, thumbTextStyle]}>➜</Animated.Text>
+                        <Animated.Text style={[styles.thumbText, thumbTextStyle]}>{thumbText}</Animated.Text>
                         <Animated.Text style={[
                             styles.buttonText,
                             buttonTextStyle,
                             { color: buttonTextColor }
-                        ]}>Click Me</Animated.Text>
+                        ]}>{buttonText}</Animated.Text>
                     </Animated.View>
                 </Pressable>
             </GestureDetector>
