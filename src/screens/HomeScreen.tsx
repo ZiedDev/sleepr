@@ -1,13 +1,15 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import useLocation from '../hooks/useLocation';
 import { SleepLogic } from '../db/logic';
 import { useStorage } from '../db/storage';
 import useColorStore from '../hooks/useColors';
 import MorphSlider from '../components/MorphSlider';
-import { useDerivedValue, useSharedValue } from 'react-native-reanimated';
+import { Easing, SharedValue, useDerivedValue, useSharedValue } from 'react-native-reanimated';
+import { StatusBar } from 'expo-status-bar';
+import { scheduleOnRN } from 'react-native-worklets';
 
-export default function HomeScreen() {
+export default function HomeScreen({ progress }: { progress: SharedValue<number> }) {
   useEffect(() => {
     useColorStore.getState().setBlur(0);
   }, []);
@@ -15,18 +17,32 @@ export default function HomeScreen() {
   const currentSession = useStorage((state) => state.currentSession);
   const isTracking = !!currentSession;
 
-  const progress = useSharedValue(Number(isTracking));
   const blur = useColorStore(state => state.blur);
+  const [statusbarHide, setStatusbarHide] = useState(isTracking);
 
-  useDerivedValue(()=>{
-    // TODO: interpolate here + animate navbar
-    blur.value=progress.value;
+  useDerivedValue(() => {
+    const t = progress.value;
+    blur.value = 30 * Easing.in(Easing.cubic)(t);
+
+    if (t > 0.7 && !statusbarHide) {
+      scheduleOnRN(setStatusbarHide, true);
+    } else if ((t <= 0.7 && statusbarHide)) {
+      scheduleOnRN(setStatusbarHide, false);
+    }
   })
 
   return (
     <View style={styles.container}>
+      <StatusBar
+        hidden={statusbarHide}
+        style='light'
+        hideTransitionAnimation='slide'
+        animated={true}
+        translucent
+      />
       <MorphSlider
         isInitialComplete={isTracking}
+        progress={progress}
 
         onComplete={() => {
           const location = useLocation.getState().location;
@@ -45,8 +61,6 @@ export default function HomeScreen() {
           SleepLogic.stopTracking({ lat, lon });
           console.log("[HomeScreen] Tracking stopped and saved.");
         }}
-
-        progress={progress}
       />
     </View>
   );
@@ -58,6 +72,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'flex-end',
-    paddingBottom: 230,
+    paddingBottom: 280,
   },
 });
