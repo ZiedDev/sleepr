@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Dimensions, StyleSheet, View } from 'react-native';
 import useLocation from '../hooks/useLocation';
 import { SleepLogic } from '../db/logic';
 import { useStorage } from '../db/storage';
@@ -22,11 +22,12 @@ export default function HomeScreen({ progress }: { progress: SharedValue<number>
 
   useDerivedValue(() => {
     const t = progress.value;
-    blur.value = 30 * Easing.in(Easing.cubic)(t);
+    const b = 3 * Math.floor(30 * Easing.in(Easing.cubic)(t) / 3);
+    if (b != blur.value) blur.value = b;
 
-    if (t > 0.7 && !statusbarHide) {
+    if (t > 0.75 && !statusbarHide) {
       scheduleOnRN(setStatusbarHide, true);
-    } else if ((t <= 0.7 && statusbarHide)) {
+    } else if ((t <= 0.75 && statusbarHide)) {
       scheduleOnRN(setStatusbarHide, false);
     }
   })
@@ -43,6 +44,7 @@ export default function HomeScreen({ progress }: { progress: SharedValue<number>
       <MorphSlider
         isInitialComplete={isTracking}
         progress={progress}
+        trackWidth={0.6944444444 * Dimensions.get('screen').width}
 
         onComplete={() => {
           const location = useLocation.getState().location;

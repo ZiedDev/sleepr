@@ -1,6 +1,6 @@
 export const backgroundColorLUT = {
     // keys:                       -1.4 (Night)  -1.2 (Twilight) -1.1 (post-Twilight) -0.1 (Pre-Sunrise) 0 (Sunrise)  0.25 (Morning)       0.5 (Noon)    0.83 (Evening) 0.915 (Early Sunset)  1 (Sunset) 1.2 (pre-Twilight) 1.2 (Twilight)      1.4 (Night) 
-    stops:                      [         -1.4,            -1.2,            -1.1,            -0.1,               0,            0.25,             0.5,            0.67,           0.915,               1,             1.1,             1.2,             1.4],
+    stops:                      [         -1.5,            -1.2,            -1.1,            -0.1,               0,            0.25,             0.5,            0.67,           0.915,               1,             1.1,             1.2,             1.5],
 
     // SKY
     sky1: /* radiance */        ["#121e49ff",   "#212d67ff",   "#212d67ff",   "#212d67ff",   "#f1cc90ff",   "#f4b083ff",   "#4ec9f4ff",   "#d4effcff",   "#90666cff",   "#ffb642ff",   "#212d67ff",   "#212d67ff",   "#121e49ff"],

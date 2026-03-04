@@ -79,7 +79,7 @@ export default function StatsScreen() {
           value={sliderValue}
           onValueChange={(value) => {
             setSliderValue(value);
-            setProgressByTime(DateTime.now().set({ hour: value }));
+            setProgressByTime(DateTime.now().startOf('day').plus({ hour: value }));
           }}
         />
 
