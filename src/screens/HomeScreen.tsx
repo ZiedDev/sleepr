@@ -22,11 +22,12 @@ export default function HomeScreen({ progress }: { progress: SharedValue<number>
 
   useDerivedValue(() => {
     const t = progress.value;
-    blur.value = 30 * Easing.in(Easing.cubic)(t);
+    const b = 3 * Math.floor(30 * Easing.in(Easing.cubic)(t) / 3);
+    if (b != blur.value) blur.value = b;
 
-    if (t > 0.7 && !statusbarHide) {
+    if (t > 0.75 && !statusbarHide) {
       scheduleOnRN(setStatusbarHide, true);
-    } else if ((t <= 0.7 && statusbarHide)) {
+    } else if ((t <= 0.75 && statusbarHide)) {
       scheduleOnRN(setStatusbarHide, false);
     }
   })
