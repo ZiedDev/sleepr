@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Dimensions, StyleSheet, View } from 'react-native';
 import useLocation from '../hooks/useLocation';
 import { SleepLogic } from '../db/logic';
 import { useStorage } from '../db/storage';
@@ -43,6 +43,7 @@ export default function HomeScreen({ progress }: { progress: SharedValue<number>
       <MorphSlider
         isInitialComplete={isTracking}
         progress={progress}
+        trackWidth={0.6944444444 * Dimensions.get('screen').width}
 
         onComplete={() => {
           const location = useLocation.getState().location;

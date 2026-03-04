@@ -122,12 +122,12 @@ const getSunData = async (time: DateTime): Promise<SunTimesRecord | null> => {
 const calculateProgress = (time: DateTime, sunData: SunTimesRecord | null): number => {
     if (!sunData) return 2;
     const secondsSinceSunrise = time.diff(DateTime.fromSeconds(sunData.sunrise), 'seconds').seconds;
-    const secondsSinceSunset = time. diff(DateTime.fromSeconds(sunData.sunset), 'seconds').seconds;
+    const secondsSinceSunset = time.diff(DateTime.fromSeconds(sunData.sunset), 'seconds').seconds;
     const nightlength = 86400 - sunData.daylength;
 
     const middayProgress = secondsSinceSunrise / sunData.daylength;
-    if (middayProgress<0) return secondsSinceSunrise/nightlength*0.5;
-    if (middayProgress>1) return 1+ secondsSinceSunset/nightlength*0.5;
+    if (middayProgress < 0) return secondsSinceSunrise / nightlength * 3;
+    if (middayProgress > 1) return 1 + secondsSinceSunset / nightlength;
     return middayProgress;
 };
 
