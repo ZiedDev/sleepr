@@ -72,6 +72,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'flex-end',
-    paddingBottom: 230,
+    paddingBottom: 280,
   },
 });

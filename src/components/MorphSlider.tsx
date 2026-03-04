@@ -29,7 +29,7 @@ interface MorphSliderProps {
 }
 
 export default function MorphSlider({
-    trackWidth = 320,
+    trackWidth = 250,
     trackHeight = 64,
     thumbSize = 56,
     buttonWidth = 200,
@@ -94,13 +94,13 @@ export default function MorphSlider({
         .minDistance(4)
         .onUpdate((event) => {
             const t = translateX.value / maxX;
-            const resistance = 1 - 0.00373147207275 * (Math.exp(4 * t) - 1);
+            const resistance = 1 - 0.00223888324365 * (Math.exp(3 * t) - 1);
             translateX.value = Math.max(0, Math.min(event.translationX * resistance, maxX));
 
             progress.value = t;
         })
         .onEnd((event) => {
-            if (translateX.value > maxX * 0.8) {
+            if (translateX.value > maxX * 0.75) {
                 morphToButton();
             } else {
                 resetSlider();
