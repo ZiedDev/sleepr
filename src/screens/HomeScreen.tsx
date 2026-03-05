@@ -9,7 +9,7 @@ import { Easing, SharedValue, useDerivedValue, useSharedValue } from 'react-nati
 import { StatusBar } from 'expo-status-bar';
 import { scheduleOnRN } from 'react-native-worklets';
 
-export default function HomeScreen({ progress }: { progress: SharedValue<number> }) {
+export default function HomeScreen({ fadeOutNav }: { fadeOutNav: SharedValue<number> }) {
   useEffect(() => {
     useColorStore.getState().setBlur(0);
   }, []);
@@ -20,17 +20,19 @@ export default function HomeScreen({ progress }: { progress: SharedValue<number>
   const blur = useColorStore(state => state.blur);
   const [statusbarHide, setStatusbarHide] = useState(isTracking);
 
-  useDerivedValue(() => {
-    const t = progress.value;
-    const b = 30 * Easing.in(Easing.cubic)(Math.floor(t * 10) / 10);
-    if (b != blur.value) blur.value = b;
+  //     const fadeOutNav = Easing.out(Easing.cubic)(fadeOut.value);
 
-    if (t > 0.75 && !statusbarHide) {
-      scheduleOnRN(setStatusbarHide, true);
-    } else if ((t <= 0.75 && statusbarHide)) {
-      scheduleOnRN(setStatusbarHide, false);
-    }
-  })
+  // useDerivedValue(() => {
+  //   const t = progress.value;
+  //   const b = 30 * Easing.in(Easing.cubic)(Math.floor(t * 10) / 10);
+  //   if (b != blur.value) blur.value = b;
+
+  //   if (t > 0.75 && !statusbarHide) {
+  //     scheduleOnRN(setStatusbarHide, true);
+  //   } else if ((t <= 0.75 && statusbarHide)) {
+  //     scheduleOnRN(setStatusbarHide, false);
+  //   }
+  // })
 
   return (
     <View style={styles.container}>
@@ -43,8 +45,14 @@ export default function HomeScreen({ progress }: { progress: SharedValue<number>
       />
       <MorphSlider
         isInitialComplete={isTracking}
-        progress={progress}
         trackWidth={0.6944444444 * Dimensions.get('screen').width}
+
+        animationPlugins={[
+          {
+            val: fadeOutNav,
+            onUpdate: (p) => {'worklet';return Easing.out(Easing.cubic)(p)},
+          }
+        ]}
 
         onComplete={() => {
           const location = useLocation.getState().location;
@@ -52,6 +60,7 @@ export default function HomeScreen({ progress }: { progress: SharedValue<number>
           const lon = location?.coords.longitude ?? null;
 
           SleepLogic.startTracking({ lat, lon });
+          // TODO: Add haptics here
           console.log("[HomeScreen] Tracking started.");
         }}
 

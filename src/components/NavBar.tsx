@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { View, TouchableOpacity, Text, StyleSheet, Dimensions, Button } from 'react-native';
-import Animated, { cubicBezier, interpolateColor, useDerivedValue, useSharedValue, withTiming, Easing, useAnimatedStyle, SharedValue, withSpring, interpolate, Extrapolation } from 'react-native-reanimated';
+import React, { useEffect } from 'react';
+import { View, TouchableOpacity, Text, StyleSheet, Dimensions } from 'react-native';
+import Animated, { interpolateColor, useDerivedValue, useSharedValue, useAnimatedStyle, SharedValue, withSpring, interpolate, Extrapolation } from 'react-native-reanimated';
 import SafeBlurView from './SafeBlurView';
 import PhMoonBold from '../../assets/svgs/PhMoonBold';
 import PhChartBarBold from '../../assets/svgs/PhChartBarBold';
@@ -23,10 +23,10 @@ const BUTTON_WIDTH = (width - HORIZONTAL_PADDING - 8) / navOptions.length;
 const BUTTON_HEIGHT = 82;
 const AnimatedText = Animated.createAnimatedComponent(Text);
 
-export default function NavBar({ navState, setNavState, progress }: {
+export default function NavBar({ navState, setNavState, fadeOut = useSharedValue(0) }: {
   navState: NavState;
   setNavState: React.Dispatch<React.SetStateAction<NavState>>;
-  progress: SharedValue<number>;
+  fadeOut?: SharedValue<number>;
 }) {
   const i = navOptions.findIndex(n => n.key === navState);
   const selectedIndex = useSharedValue(i);
@@ -41,17 +41,16 @@ export default function NavBar({ navState, setNavState, progress }: {
   }));
 
   const animatedContainerStyle = useAnimatedStyle(() => {
-    const easedValue = Easing.out(Easing.cubic)(progress.value);
     return {
       opacity: interpolate(
-        easedValue,
+        fadeOut.value,
         [0, 1],
         [1, 0],
         Extrapolation.CLAMP
       ),
       transform: [{
         translateY: interpolate(
-          easedValue,
+          fadeOut.value,
           [0, 1],
           [0, 100],
           Extrapolation.CLAMP

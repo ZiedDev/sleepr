@@ -42,10 +42,10 @@ function AppContent() {
   const [navState, setNavState] = useState<"Home" | "Statistics" | "Settings">('Home');
 
   const currentSession = useStorage((state) => state.currentSession);
-  const progress = useSharedValue(currentSession ? 1 : 0);
+  const fadeOutNav = useSharedValue(currentSession ? 1 : 0);
 
   const page = {
-    "Home": <HomeScreen progress={progress} />,
+    "Home": <HomeScreen fadeOutNav={fadeOutNav} />,
     "Statistics": <StatsScreen />,
     "Settings": <SettingsScreen />
   }
@@ -58,7 +58,7 @@ function AppContent() {
     <>
       <View style={{ flex: 1, marginTop, marginBottom }}>
         {page[navState]}
-        <NavBar navState={navState} setNavState={setNavState} progress={progress} />
+        <NavBar navState={navState} setNavState={setNavState} fadeOut={fadeOutNav} />
       </View>
     </>
   );
