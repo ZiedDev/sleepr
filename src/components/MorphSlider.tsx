@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, interpolate, interpolateColor, Extrapolation, Easing, SharedValue } from 'react-native-reanimated';
-import * as Haptics from 'expo-haptics';
 import { scheduleOnRN } from 'react-native-worklets';
 
 interface AnimationPlugin {
@@ -34,9 +33,6 @@ interface MorphSliderProps {
     buttonText?: string;
     buttonTextColor?: string;
 
-    onComplete?: () => void;
-    onReset?: () => void;
-
     isInitialComplete?: boolean;
     endPercentage?: number;
     animationPlugins?: AnimationPlugin[];
@@ -58,9 +54,6 @@ export default function MorphSlider({
     buttonColor = "#4caf50",
     buttonText = "Click Me",
     buttonTextColor = "#fff",
-
-    onComplete,
-    onReset,
 
     isInitialComplete = false,
     endPercentage = 0.75,
@@ -189,8 +182,6 @@ export default function MorphSlider({
                     easing: Easing.out(Easing.back(1.8)),
                 }, () => {
                     scheduleOnRN(setCompleted, true);
-                    scheduleOnRN(Haptics.notificationAsync, Haptics.NotificationFeedbackType.Success);
-                    if (onComplete) scheduleOnRN(onComplete);
                     triggerMorphButton();
                 });
             } else {
@@ -246,11 +237,9 @@ export default function MorphSlider({
                 <Pressable onPress={() => {
                     if (completed) {
                         scheduleOnRN(setCompleted, false);
-                        if (onReset) scheduleOnRN(onReset);
                         triggeronMorphThumb();
                         scheduleOnRN(setAtEnd, false);
                         triggerEnd(atEnd);
-                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)
                     }
                 }}>
                     <Animated.View style={[
