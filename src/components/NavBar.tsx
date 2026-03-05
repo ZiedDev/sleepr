@@ -52,8 +52,7 @@ export default function NavBar({ navState, setNavState, fadeOut = useSharedValue
         translateY: interpolate(
           fadeOut.value,
           [0, 1],
-          [0, 100],
-          Extrapolation.CLAMP
+          [0, 100]
         ),
       }],
     };

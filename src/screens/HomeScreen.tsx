@@ -5,7 +5,7 @@ import { SleepLogic } from '../db/logic';
 import { useStorage } from '../db/storage';
 import useColorStore from '../hooks/useColors';
 import MorphSlider from '../components/MorphSlider';
-import { Easing, SharedValue, withTiming } from 'react-native-reanimated';
+import { Easing, SharedValue, useDerivedValue, withDelay, withSpring, withTiming } from 'react-native-reanimated';
 import { StatusBar } from 'expo-status-bar';
 import { scheduleOnRN } from 'react-native-worklets';
 import * as Haptics from 'expo-haptics';
@@ -47,7 +47,7 @@ export default function HomeScreen({ fadeOutNav }: { fadeOutNav: SharedValue<num
   return (
     <View style={styles.container}>
       <StatusBar
-        // hidden={statusbarHide}
+        hidden={statusbarHide}
         style='light'
         hideTransitionAnimation='slide'
         animated={true}
@@ -60,10 +60,16 @@ export default function HomeScreen({ fadeOutNav }: { fadeOutNav: SharedValue<num
         animationPlugins={[
           {
             val: useColorStore(state => state.blur) as SharedValue<number>,
-            onUpdate: (t, d) => { 'worklet'; return 30 * Easing.in(Easing.cubic)(Math.floor(t * 10) / 10) }
+            onUpdate: (t, d) => { 'worklet'; return 30 * Easing.in(Easing.cubic)(t) },
+            onReset: () => { 'worklet'; return withTiming(0, { duration: 500 }) },
+            onMorphThumb: () => { 'worklet'; return withTiming(0, { duration: 500 }) },
           }, {
             val: fadeOutNav,
-            onEnd: (e) => { 'worklet'; return withTiming(Number(!e), { duration: 1000, easing: Easing.out(Easing.cubic) }) },
+            onEnd: (e) => {
+              'worklet';
+              if (e) return withDelay(500, withSpring(Number(!e), { damping: 10, stiffness: 100, mass: 1 }))
+              else return withTiming(Number(!e), { duration: 1000, easing: Easing.out(Easing.cubic) })
+            },
           }, {
             val: null,
             onEnd: (e) => { 'worklet'; scheduleOnRN(setStatusbarHide, !e); return 0; },
