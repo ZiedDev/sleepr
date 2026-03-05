@@ -8,7 +8,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 interface AnimationPlugin {
     val: SharedValue<number> | null;
 
-    onUpdate?: (progress: number) => number;
+    onUpdate?: (progress: number, delta: number) => number;
     onEnd?: (atEnd: boolean) => number;
     onReset?: () => number;
     onMorphButton?: () => number;
@@ -71,30 +71,55 @@ export default function MorphSlider({
 
     const translateX = useSharedValue(Number(isInitialComplete));
     const morphWidth = useSharedValue(isInitialComplete ? buttonWidth : thumbSize);
-    const inAnimFinish = useSharedValue(Number(isInitialComplete));
+    const isAnimFinish = useSharedValue(Number(isInitialComplete));
 
     const maxX = trackWidth - thumbSize - (padding * 2);
 
+    const allPlugins = React.useMemo(() => {
+        const internalPlugins: AnimationPlugin[] = [
+            {
+                val: translateX,
+                onUpdate: (t, d) => {
+                    'worklet';
+                    const resistance = 1 - 0.00223888324365 * (Math.exp(3 * t) - 1);
+                    return Math.max(0, Math.min(d * resistance, maxX));
+                },
+                onReset: () => { 'worklet'; return withTiming(0, { duration: 400, easing: Easing.out(Easing.cubic) }) },
+                onMorphButton: () => { 'worklet'; return withTiming(0, { easing: Easing.out(Easing.poly(3)) }) },
+            }, {
+                val: morphWidth,
+                onMorphButton: () => { 'worklet'; return withTiming(buttonWidth, { easing: Easing.out(Easing.poly(3)) }) },
+                onMorphThumb: () => { 'worklet'; return withTiming(thumbSize) },
+            }, {
+                val: isAnimFinish,
+                onMorphButton: () => { 'worklet'; return withTiming(1, { duration: 50, easing: Easing.out(Easing.poly(4)) }) },
+                onMorphThumb: () => { 'worklet'; return withTiming(0, { duration: 50, easing: Easing.out(Easing.poly(4)) }) },
+            },
+        ];
+
+        return [...animationPlugins, ...internalPlugins];
+    }, [animationPlugins]);
+
     // Callback triggers
-    const triggerUpdate = (progress: number) => {
+    const triggerUpdate = (progress: number, delta: number) => {
         'worklet';
-        
-        for (let i = 0; i < animationPlugins.length; i++) {
-            const plugin = animationPlugins[i];
+
+        for (let i = 0; i < allPlugins.length; i++) {
+            const plugin = allPlugins[i];
             if (plugin.onUpdate) {
                 if (plugin.val) {
-                    plugin.val.value = plugin.onUpdate(progress);
+                    plugin.val.value = plugin.onUpdate(progress, delta);
                 }
                 else
-                    plugin.onUpdate(progress);
+                    plugin.onUpdate(progress, delta);
             }
         }
     };
 
     const triggerEnd = (atEnd: boolean) => {
         'worklet';
-        for (let i = 0; i < animationPlugins.length; i++) {
-            const plugin = animationPlugins[i];
+        for (let i = 0; i < allPlugins.length; i++) {
+            const plugin = allPlugins[i];
             if (plugin.onEnd) {
                 if (plugin.val)
                     plugin.val.value = plugin.onEnd(atEnd);
@@ -106,8 +131,8 @@ export default function MorphSlider({
 
     const triggerReset = () => {
         'worklet';
-        for (let i = 0; i < animationPlugins.length; i++) {
-            const plugin = animationPlugins[i];
+        for (let i = 0; i < allPlugins.length; i++) {
+            const plugin = allPlugins[i];
             if (plugin.onReset) {
                 if (plugin.val)
                     plugin.val.value = plugin.onReset();
@@ -119,8 +144,8 @@ export default function MorphSlider({
 
     const triggerMorphButton = () => {
         'worklet';
-        for (let i = 0; i < animationPlugins.length; i++) {
-            const plugin = animationPlugins[i];
+        for (let i = 0; i < allPlugins.length; i++) {
+            const plugin = allPlugins[i];
             if (plugin.onMorphButton) {
                 if (plugin.val)
                     plugin.val.value = plugin.onMorphButton();
@@ -132,8 +157,8 @@ export default function MorphSlider({
 
     const triggeronMorphThumb = () => {
         'worklet';
-        for (let i = 0; i < animationPlugins.length; i++) {
-            const plugin = animationPlugins[i];
+        for (let i = 0; i < allPlugins.length; i++) {
+            const plugin = allPlugins[i];
             if (plugin.onMorphThumb) {
                 if (plugin.val)
                     plugin.val.value = plugin.onMorphThumb();
@@ -143,63 +168,37 @@ export default function MorphSlider({
         }
     };
 
-    // Animation Parts
-
-    const resetSlider = () => {
-        'worklet';
-        translateX.value = withTiming(0, { duration: 400, easing: Easing.out(Easing.cubic) });
-        // progress.value = withTiming(0, { duration: 1000, easing: Easing.out(Easing.cubic) });
-    };
-
-    const morphToButton = () => {
-        'worklet';
-        translateX.value = withTiming(maxX, {
-            duration: 200,
-            easing: Easing.out(Easing.back(1.8)),
-        }, () => {
-            translateX.value = withTiming(0, { easing: Easing.out(Easing.poly(3)) });
-            morphWidth.value = withTiming(buttonWidth, { easing: Easing.out(Easing.poly(3)) });
-            inAnimFinish.value = withTiming(1, { duration: 50, easing: Easing.out(Easing.poly(4)) });
-            scheduleOnRN(setCompleted, true);
-            scheduleOnRN(Haptics.notificationAsync, Haptics.NotificationFeedbackType.Success);
-            if (onComplete) scheduleOnRN(onComplete);
-        })
-    };
-
-    const morphToThumb = () => {
-        'worklet';
-        morphWidth.value = withTiming(thumbSize);
-        inAnimFinish.value = withTiming(0, { duration: 50, easing: Easing.out(Easing.poly(4)) });
-        // progress.value = withTiming(0, { duration: 700 });
-        scheduleOnRN(setCompleted, false);
-        if (onReset) scheduleOnRN(onReset);
-    };
-
     // Gesture
-
     const pan = Gesture.Pan()
         .enabled(!completed)
         .minDistance(4)
         .onUpdate((event) => {
             const t = translateX.value / maxX;
-            const resistance = 1 - 0.00223888324365 * (Math.exp(3 * t) - 1);
-            translateX.value = Math.max(0, Math.min(event.translationX * resistance, maxX));
+            triggerUpdate(t, event.translationX);
 
-            // progress.value = t;
-            triggerUpdate(t);
+            const a = translateX.value > maxX * endPercentage;
+            if (atEnd != a) {
+                scheduleOnRN(setAtEnd, a);
+                triggerEnd(atEnd);
+            }
         })
         .onEnd((event) => {
             if (translateX.value > maxX * endPercentage) {
-                morphToButton();
-                triggerMorphButton();
+                translateX.value = withTiming(maxX, {
+                    duration: 200,
+                    easing: Easing.out(Easing.back(1.8)),
+                }, () => {
+                    scheduleOnRN(setCompleted, true);
+                    scheduleOnRN(Haptics.notificationAsync, Haptics.NotificationFeedbackType.Success);
+                    if (onComplete) scheduleOnRN(onComplete);
+                    triggerMorphButton();
+                });
             } else {
-                resetSlider();
                 triggerReset();
             }
         });
 
     // Animated Styles
-
     const animatedMorphStyle = useAnimatedStyle(() => ({
         transform: [{ translateX: translateX.value }],
         width: morphWidth.value,
@@ -211,16 +210,16 @@ export default function MorphSlider({
     }));
 
     const thumbTextStyle = useAnimatedStyle(() => ({
-        opacity: withTiming(inAnimFinish.value === 0 ? 1 : 0),
+        opacity: withTiming(isAnimFinish.value === 0 ? 1 : 0),
         color: interpolateColor(
-            inAnimFinish.value,
+            isAnimFinish.value,
             [0, 1],
             [thumbTextColor, buttonColor]
         )
     }));
 
     const buttonTextStyle = useAnimatedStyle(() => ({
-        opacity: withTiming(inAnimFinish.value === 1 ? 1 : 0),
+        opacity: withTiming(isAnimFinish.value === 1 ? 1 : 0),
     }));
 
     const trackStyle = useAnimatedStyle(() => ({
@@ -244,7 +243,16 @@ export default function MorphSlider({
             }
         ]}>
             <GestureDetector gesture={pan}>
-                <Pressable onPress={() => { if (completed) { morphToThumb(); triggeronMorphThumb(); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning) } }}>
+                <Pressable onPress={() => {
+                    if (completed) {
+                        scheduleOnRN(setCompleted, false);
+                        if (onReset) scheduleOnRN(onReset);
+                        triggeronMorphThumb();
+                        scheduleOnRN(setAtEnd, false);
+                        triggerEnd(atEnd);
+                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)
+                    }
+                }}>
                     <Animated.View style={[
                         styles.morph,
                         animatedMorphStyle,

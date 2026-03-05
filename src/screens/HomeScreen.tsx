@@ -5,7 +5,7 @@ import { SleepLogic } from '../db/logic';
 import { useStorage } from '../db/storage';
 import useColorStore from '../hooks/useColors';
 import MorphSlider from '../components/MorphSlider';
-import { Easing, SharedValue, useDerivedValue, useSharedValue } from 'react-native-reanimated';
+import { Easing, SharedValue, useDerivedValue, useSharedValue, withTiming } from 'react-native-reanimated';
 import { StatusBar } from 'expo-status-bar';
 import { scheduleOnRN } from 'react-native-worklets';
 
@@ -16,23 +16,7 @@ export default function HomeScreen({ fadeOutNav }: { fadeOutNav: SharedValue<num
 
   const currentSession = useStorage((state) => state.currentSession);
   const isTracking = !!currentSession;
-
-  const blur = useColorStore(state => state.blur);
   const [statusbarHide, setStatusbarHide] = useState(isTracking);
-
-  //     const fadeOutNav = Easing.out(Easing.cubic)(fadeOut.value);
-
-  // useDerivedValue(() => {
-  //   const t = progress.value;
-  //   const b = 30 * Easing.in(Easing.cubic)(Math.floor(t * 10) / 10);
-  //   if (b != blur.value) blur.value = b;
-
-  //   if (t > 0.75 && !statusbarHide) {
-  //     scheduleOnRN(setStatusbarHide, true);
-  //   } else if ((t <= 0.75 && statusbarHide)) {
-  //     scheduleOnRN(setStatusbarHide, false);
-  //   }
-  // })
 
   return (
     <View style={styles.container}>
@@ -49,8 +33,14 @@ export default function HomeScreen({ fadeOutNav }: { fadeOutNav: SharedValue<num
 
         animationPlugins={[
           {
+            val: useColorStore(state => state.blur) as SharedValue<number>,
+            onUpdate: (t, d) => { 'worklet'; return 30 * Easing.in(Easing.cubic)(Math.floor(t * 10) / 10) }
+          }, {
             val: fadeOutNav,
-            onUpdate: (p) => {'worklet';return Easing.out(Easing.cubic)(p)},
+            onEnd: (e) => { 'worklet'; return withTiming(Number(!e), { duration: 1000, easing: Easing.out(Easing.cubic) }) },
+          }, {
+            val: null,
+            onEnd: (e) => { 'worklet'; scheduleOnRN(setStatusbarHide, !e); return 0; }
           }
         ]}
 
