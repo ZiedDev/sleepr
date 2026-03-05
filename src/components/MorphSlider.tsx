@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet, Text } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, interpolate, interpolateColor, Extrapolation, Easing, SharedValue } from 'react-native-reanimated';
+import { View } from 'react-native-reanimated/lib/typescript/Animated';
 import { scheduleOnRN } from 'react-native-worklets';
 
 interface AnimationPlugin {
@@ -22,9 +23,10 @@ interface MorphSliderProps {
     padding?: number;
 
     trackColor?: string;
-    trackText?: string; // TODO: add middle line text
+    trackText?: string;
     trackTextColor?: string;
 
+    pillColor?: string;
     thumbColor?: string;
     thumbText?: string;
     thumbTextColor?: string;
@@ -46,7 +48,10 @@ export default function MorphSlider({
     padding = 4,
 
     trackColor = "#222222",
+    trackText = "Track",
+    trackTextColor = "#fff",
 
+    pillColor = "#d2dae0",
     thumbColor = "#f0f8ff",
     thumbText = "➜",
     thumbTextColor = "#000",
@@ -190,7 +195,7 @@ export default function MorphSlider({
         });
 
     // Animated Styles
-    const animatedMorphStyle = useAnimatedStyle(() => ({
+    const morphStyle = useAnimatedStyle(() => ({
         transform: [{ translateX: translateX.value }],
         width: morphWidth.value,
         backgroundColor: interpolateColor(
@@ -198,6 +203,10 @@ export default function MorphSlider({
             [thumbSize, buttonWidth],
             [thumbColor, buttonColor]
         ),
+    }));
+
+    const pillStyle = useAnimatedStyle(() => ({
+        width: translateX.value + thumbSize,
     }));
 
     const thumbTextStyle = useAnimatedStyle(() => ({
@@ -233,6 +242,17 @@ export default function MorphSlider({
                 paddingHorizontal: padding
             }
         ]}>
+            <Animated.View style={styles.trackTextContainer}>
+                <Text style={[styles.trackText, { color: trackTextColor }]}>{trackText}</Text>
+            </Animated.View>
+            <Animated.View style={[
+                styles.pill,
+                pillStyle,
+                {
+                    height: thumbSize, borderRadius: thumbSize / 2, backgroundColor: pillColor,
+                    top: padding, left: padding,
+                }
+            ]} />
             <GestureDetector gesture={pan}>
                 <Pressable onPress={() => {
                     if (completed) {
@@ -244,7 +264,7 @@ export default function MorphSlider({
                 }}>
                     <Animated.View style={[
                         styles.morph,
-                        animatedMorphStyle,
+                        morphStyle,
                         { height: thumbSize, borderRadius: thumbSize / 2 }
                     ]}>
                         <Animated.Text style={[styles.thumbText, thumbTextStyle]}>{thumbText}</Animated.Text>
@@ -262,9 +282,22 @@ export default function MorphSlider({
 
 const styles = StyleSheet.create({
     track: {
-        backgroundColor: "#222222",
         justifyContent: 'center',
         overflow: 'hidden',
+    },
+    trackTextContainer: {
+        position: 'absolute',
+        top: 0,
+        bottom: 0,
+        left: 0,
+        right: 0,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    trackText: {
+        position: 'relative',
+        fontSize: 19,
+        fontWeight: '200',
     },
     morph: {
         alignItems: 'center',
@@ -278,5 +311,8 @@ const styles = StyleSheet.create({
         position: 'absolute',
         fontSize: 18,
         fontWeight: '600',
+    },
+    pill: {
+        position: 'absolute',
     },
 });

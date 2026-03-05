@@ -63,11 +63,15 @@ export default function HomeScreen({ fadeOutNav }: { fadeOutNav: SharedValue<num
             onUpdate: (t, d) => { 'worklet'; return t },
             onReset: () => { 'worklet'; return withTiming(0, { duration: 500 }) },
             onMorphThumb: () => { 'worklet'; return withTiming(0, { duration: 500 }) },
+
+            // onUpdate: (t, d) => { 'worklet'; return Math.round(t) },
+            // onReset: () => { 'worklet'; return 0 },
+            // onMorphThumb: () => { 'worklet'; return 0 },
           }, {
             val: fadeOutNav,
             onEnd: (e) => {
               'worklet';
-              if (e) return withDelay(500, withSpring(Number(!e), { damping: 10, stiffness: 100, mass: 1 }))
+              if (e) return withDelay(500, withSpring(Number(!e), { damping: 15, stiffness: 200, mass: 1 }))
               else return withTiming(Number(!e), { duration: 1000, easing: Easing.out(Easing.cubic) })
             },
           }, {
