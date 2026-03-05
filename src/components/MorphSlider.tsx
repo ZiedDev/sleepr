@@ -207,6 +207,11 @@ export default function MorphSlider({
 
     const pillStyle = useAnimatedStyle(() => ({
         width: translateX.value + thumbSize,
+        backgroundColor: interpolateColor(
+            isAnimFinish.value,
+            [0, 1],
+            [pillColor, buttonColor]
+        )
     }));
 
     const thumbTextStyle = useAnimatedStyle(() => ({
