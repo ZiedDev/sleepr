@@ -60,7 +60,7 @@ export default function HomeScreen({ fadeOutNav }: { fadeOutNav: SharedValue<num
         animationPlugins={[
           {
             val: useColorStore(state => state.blur) as SharedValue<number>,
-            onUpdate: (t, d) => { 'worklet'; return 30 * Easing.in(Easing.cubic)(t) },
+            onUpdate: (t, d) => { 'worklet'; return t },
             onReset: () => { 'worklet'; return withTiming(0, { duration: 500 }) },
             onMorphThumb: () => { 'worklet'; return withTiming(0, { duration: 500 }) },
           }, {

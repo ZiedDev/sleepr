@@ -36,7 +36,7 @@ export default function StatsScreen() {
   );
 
   useEffect(() => {
-    useColorStore.getState().setBlur(15);
+    useColorStore.getState().setBlur(0.8);
   }, []);
 
   return (

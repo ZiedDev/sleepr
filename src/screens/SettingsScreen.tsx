@@ -43,7 +43,7 @@ export default function SettingsScreen() {
 
   if (['android', 'web'].includes(Platform.OS)) {
     useEffect(() => {
-      useColorStore.getState().setBlur(15);
+      useColorStore.getState().setBlur(0.8);
     }, []);
   }
 

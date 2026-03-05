@@ -155,7 +155,7 @@ const useColorStore = create<ColorState>((set, get) => {
 
         setBlur: (amount, animated = true) => {
             blur.value = animated ?
-                withTiming(amount, { duration: 500, easing: Easing.linear }) : amount;
+                withTiming(amount, { duration: 200, easing: Easing.linear }) : amount;
         },
 
         setProgressByTime: async (time, animated = true) => {

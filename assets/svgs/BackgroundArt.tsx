@@ -13,8 +13,10 @@ import {
   Mask,
   BackdropBlur,
   Points,
+  Paint,
+  Blur,
 } from '@shopify/react-native-skia';
-import { SharedValue, useDerivedValue } from 'react-native-reanimated';
+import { Easing, SharedValue, useDerivedValue } from 'react-native-reanimated';
 
 const ORIGINAL_WIDTH = 1199;
 const ORIGINAL_HEIGHT = 1508.83;
@@ -36,7 +38,18 @@ const BackgroundArt = memo(({ width = 200, colors }: {
     return path + ' Z';
   }, [])
 
-  const blur = useDerivedValue(() => colors.value.blur);
+  const zoom = useDerivedValue(() => {
+    const z = colors.value.blur * 0.05 + 1;
+    return [
+      { scale: scale * z },
+      { translateX: (1 - z) * width },
+      { translateY: (1 - z) * height },
+    ]
+  });
+
+  const blur = useDerivedValue(() => {// TODO: Rasterize for performance
+    return Math.round(30 * Easing.in(Easing.cubic)(Math.floor(colors.value.blur * 20) / 20));
+  });
 
   const sky = useDerivedValue(() => [colors.value.sky1, colors.value.sky2]);
   const skyPos = useDerivedValue(() => [{ translateX: colors.value.skyPosX }, { translateY: colors.value.skyPosY }]);
@@ -71,7 +84,7 @@ const BackgroundArt = memo(({ width = 200, colors }: {
 
   return (
     <Canvas style={{ width, height }}>
-      <Group transform={[{ scale }]}>
+      <Group transform={zoom}>
 
         {/* Sky Background */}
         <Rect x={0} y={0} width={1199} height={1197.24}>
