@@ -213,7 +213,6 @@ export const useBackgroundColors = () => {
             // STARS
             stars: getCol(LUT.stars),
             starsOpacity: getVal(LUT.starsOpacity),
-            starsGlow: getCol(LUT.starsGlow),
 
             // SUN
             sun1: getCol(LUT.sun1),

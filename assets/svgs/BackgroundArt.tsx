@@ -1,5 +1,5 @@
 // BackgroundArt.tsx
-import React, { Fragment, memo } from 'react';
+import React, { Fragment, memo, useCallback } from 'react';
 import {
   Canvas,
   Rect,
@@ -11,8 +11,8 @@ import {
   vec,
   BlurMask,
   Mask,
-  translate,
   BackdropBlur,
+  Points,
 } from '@shopify/react-native-skia';
 import { SharedValue, useDerivedValue } from 'react-native-reanimated';
 
@@ -27,14 +27,14 @@ const BackgroundArt = memo(({ width = 200, colors }: {
   const scale = width / ORIGINAL_WIDTH;
   const height = ORIGINAL_HEIGHT * scale;
 
-  const pointsToPath = (points: string) => {
+  const pointsToPath = useCallback((points: string) => {
     const p = points.trim().split(/\s+|,/);
     let path = `M ${p[0]} ${p[1]}`;
     for (let i = 2; i < p.length; i += 2) {
       path += ` L ${p[i]} ${p[i + 1]}`;
     }
     return path + ' Z';
-  };
+  }, [])
 
   const blur = useDerivedValue(() => colors.value.blur);
 
@@ -43,7 +43,6 @@ const BackgroundArt = memo(({ width = 200, colors }: {
 
   const stars = useDerivedValue(() => colors.value.stars);
   const starsOpacity = useDerivedValue(() => colors.value.starsOpacity);
-  const starsGlow = useDerivedValue(() => colors.value.starsGlow);
 
   const sun = useDerivedValue(() => [colors.value.sun1, colors.value.sun2]);
   const sunOpacity = useDerivedValue(() => colors.value.sunOpacity);
@@ -83,14 +82,14 @@ const BackgroundArt = memo(({ width = 200, colors }: {
         </Rect>
 
         {/* Stars Layer */}
-        <Group opacity={starsOpacity}>
-          {STARS_DATA.map(([cx, cy], i) => (<Fragment key={i}>
-            <Circle cx={cx} cy={cy} r={1.5} color={stars} />
-            <Circle cx={cx} cy={cy} r={1.5} color={starsGlow}>
-              <BlurMask blur={2} style="outer" />
-            </Circle>
-          </Fragment>))}
-        </Group>
+        <Points
+          points={STAR_VECTORS}
+          mode="points"
+          color={stars}
+          strokeWidth={3}
+          strokeCap="round"
+          opacity={starsOpacity}
+        />
 
         {/* Sun */}
         <Group opacity={sunOpacity} transform={sunPos}>
@@ -308,5 +307,6 @@ const STARS_DATA = [
   [735.86, 190.31], [791.23, 158.61], [859.58, 211.31], [555.9, 233.95], [568.51, 179.56],
   [984.82, 145.67], [929.8, 164.79], [949.67, 138.99], [482.34, 265.99],
 ];
+const STAR_VECTORS = STARS_DATA.map(([x, y]) => vec(x, y));
 
 export default BackgroundArt;
