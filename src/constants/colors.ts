@@ -31,7 +31,6 @@ export const backgroundColorLUT = {
 
     // STARS     
     stars:                      ["#ffffffff",   "#ffffffff",   "#ffffffff",   "#ffffffff",   "#ffffffff",   "#ffffffff",   "#ffffffff",   "#ffffffff",   "#ffffffff",   "#ffffffff",   "#ffffffff",   "#ffffffff",   "#ffffffff"],
-    starsGlow:                  ["#ffffffff",   "#ffffff00",   "#ffffff00",   "#ffffff00",   "#ffffff59",   "#ffffff00",   "#ffffff00",   "#ffffff00",   "#ffffff00",   "#ffffff00",   "#ffffff00",   "#ffffff00",   "#ffffffff"],
     starsOpacity:               [            1,             0.7,             0.7,               0,               0,               0,               0,               0,               0,               0,             0.2,             0.2,               1],
 
     // SUN     

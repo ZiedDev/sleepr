@@ -5,32 +5,44 @@ import { SleepLogic } from '../db/logic';
 import { useStorage } from '../db/storage';
 import useColorStore from '../hooks/useColors';
 import MorphSlider from '../components/MorphSlider';
-import { Easing, SharedValue, useDerivedValue, useSharedValue } from 'react-native-reanimated';
+import { Easing, SharedValue, useDerivedValue, withDelay, withSpring, withTiming } from 'react-native-reanimated';
 import { StatusBar } from 'expo-status-bar';
 import { scheduleOnRN } from 'react-native-worklets';
+import * as Haptics from 'expo-haptics';
 
-export default function HomeScreen({ progress }: { progress: SharedValue<number> }) {
+export default function HomeScreen({ fadeOutNav }: { fadeOutNav: SharedValue<number> }) {
   useEffect(() => {
     useColorStore.getState().setBlur(0);
   }, []);
 
   const currentSession = useStorage((state) => state.currentSession);
   const isTracking = !!currentSession;
-
-  const blur = useColorStore(state => state.blur);
   const [statusbarHide, setStatusbarHide] = useState(isTracking);
 
-  useDerivedValue(() => {
-    const t = progress.value;
-    const b = 3 * Math.floor(30 * Easing.in(Easing.cubic)(t) / 3);
-    if (b != blur.value) blur.value = b;
+  const startTracking = () => {
+    const location = useLocation.getState().location;
+    const lat = location?.coords.latitude ?? null;
+    const lon = location?.coords.longitude ?? null;
 
-    if (t > 0.75 && !statusbarHide) {
-      scheduleOnRN(setStatusbarHide, true);
-    } else if ((t <= 0.75 && statusbarHide)) {
-      scheduleOnRN(setStatusbarHide, false);
+    SleepLogic.startTracking({ lat, lon });
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    console.log("[HomeScreen] Tracking started.");
+  };
+
+  const stopTracking = async () => {
+    const location = useLocation.getState().location;
+    const lat = location?.coords.latitude ?? null;
+    const lon = location?.coords.longitude ?? null;
+
+    try {
+      await SleepLogic.stopTracking({ lat, lon });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      console.log("[HomeScreen] Tracking stopped and saved.");
+    } catch (e) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      console.log("[HomeScreen] Tracking stop errored: ", e);
     }
-  })
+  };
 
   return (
     <View style={styles.container}>
@@ -43,26 +55,32 @@ export default function HomeScreen({ progress }: { progress: SharedValue<number>
       />
       <MorphSlider
         isInitialComplete={isTracking}
-        progress={progress}
         trackWidth={0.6944444444 * Dimensions.get('screen').width}
 
-        onComplete={() => {
-          const location = useLocation.getState().location;
-          const lat = location?.coords.latitude ?? null;
-          const lon = location?.coords.longitude ?? null;
+        animationPlugins={[
+          {
+            val: useColorStore(state => state.blur) as SharedValue<number>,
+            onUpdate: (t, d) => { 'worklet'; return t },
+            onReset: () => { 'worklet'; return withTiming(0, { duration: 500 }) },
+            onMorphThumb: () => { 'worklet'; return withTiming(0, { duration: 500 }) },
 
-          SleepLogic.startTracking({ lat, lon });
-          console.log("[HomeScreen] Tracking started.");
-        }}
-
-        onReset={() => {
-          const location = useLocation.getState().location;
-          const lat = location?.coords.latitude ?? null;
-          const lon = location?.coords.longitude ?? null;
-
-          SleepLogic.stopTracking({ lat, lon });
-          console.log("[HomeScreen] Tracking stopped and saved.");
-        }}
+            // onUpdate: (t, d) => { 'worklet'; return Math.round(t) },
+            // onReset: () => { 'worklet'; return 0 },
+            // onMorphThumb: () => { 'worklet'; return 0 },
+          }, {
+            val: fadeOutNav,
+            onEnd: (e) => {
+              'worklet';
+              if (e) return withDelay(500, withSpring(Number(!e), { damping: 15, stiffness: 200, mass: 1 }))
+              else return withTiming(Number(!e), { duration: 1000, easing: Easing.out(Easing.cubic) })
+            },
+          }, {
+            val: null,
+            onEnd: (e) => { 'worklet'; scheduleOnRN(setStatusbarHide, !e); return 0; },
+            onMorphButton: () => { 'worklet'; scheduleOnRN(startTracking); return 0; },
+            onMorphThumb: () => { 'worklet'; scheduleOnRN(stopTracking); return 0; },
+          }
+        ]}
       />
     </View>
   );
