@@ -1,13 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import useLocation from '../hooks/useLocation';
 import useColorStore from '../hooks/useColors';
-import { DataLogic } from '../db/logic';
-import Slider from '@react-native-community/slider';
-import { DateTime } from 'luxon';
-import { useAnimatedReaction } from 'react-native-reanimated';
-import { runOnJS } from 'react-native-worklets';
+import Skeleton from "react-native-reanimated-skeleton";
 
 export default function StatsScreen() {
   const [refreshing, setRefreshing] = useState(false);
@@ -19,21 +15,6 @@ export default function StatsScreen() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
     setRefreshing(false);
   }, []);
-
-  const { location, errorMsg, loading: locationLoading } = useLocation();
-  const { progress, setProgressByTime, setBlur } = useColorStore();
-
-  const [sliderValue, setSliderValue] = useState<number>(
-    DateTime.now().diff(DateTime.now().startOf('day'), 'hours').hours
-  );
-
-  const [displayProgress, setDisplayProgress] = useState(0);
-  useAnimatedReaction(
-    () => progress.value,
-    (val) => {
-      runOnJS(setDisplayProgress)(val);
-    }
-  );
 
   useEffect(() => {
     useColorStore.getState().setBlur(0.8);
@@ -53,48 +34,51 @@ export default function StatsScreen() {
           />
         }
       >
-        <Text style={styles.title}>
-          Lorem ipsum
-          {/* Lorem ipsum dolor sit amet consectetur adipisicing elit. Laboriosam animi fuga, fugit sequi dignissimos dolor commodi cupiditate cumque nihil maxime pariatur at quasi iusto blanditiis amet mollitia accusamus alias suscipit tenetur unde consequuntur itaque quaerat repellat vitae! Repudiandae, quaerat sit. Eaque repudiandae amet porro eligendi beatae vel enim eum fugiat tempora quia magnam consequatur nam dolorem facilis sapiente inventore deleniti necessitatibus error, vitae nostrum? Alias, dolorum.Lorem ipsum dolor sit amet consectetur adipisicing elit. Dolor labore itaque inventore excepturi ut voluptatum delectus nulla beatae sequi consequuntur error doloremque modi repudiandae ducimus dolore nam quas autem eius harum omnis, ullam corrupti molestiae quae incidunt? Eaque libero distinctio consequatur delectus quibusdam adipisci expedita nihil officiis quia qui, quidem id veritatis! Eaque minima recusandae adipisci velit iste explicabo nisi consequuntur amet odio nemo ratione asperiores id dolor, a porro quisquam ullam vero aliquam. Voluptatibus vel doloribus quam esse explicabo fugit architecto veritatis recusandae, ipsa delectus consequuntur dicta quas optio molestias quibusdam, similique sed accusamus! Ab iusto optio exercitationem officiis perspiciatis porro recusandae velit. Hic aliquid, perspiciatis suscipit saepe dicta repudiandae quaerat similique totam pariatur, fugiat illo dolor! Dolorum, magni nam quaerat tempore temporibus vel praesentium, veritatis, quasi harum dicta dolore cupiditate eveniet? Molestiae optio, consectetur iusto quo ipsum aspernatur illo? Sequi, amet. Provident numquam corporis consequatur, quibusdam consectetur tempora deserunt autem, sit minima, atque fuga dolor. Maiores ipsam esse dolor eius dolores quis. Consequuntur repudiandae soluta incidunt deleniti ex pariatur. Pariatur veniam distinctio maxime illo, amet ad tempore iusto mollitia autem nostrum inventore eius, aut, odio est laudantium assumenda? Quasi mollitia doloribus ea, magni dicta similique atque placeat minus? */}
-        </Text>
 
-        <TouchableOpacity
-          style={[styles.button, styles.infoButton, { marginTop: 20 }]}
-          onPress={() => { DataLogic.importFromFile({ clearExisting: false }); Haptics.selectionAsync(); }}
+        <View style={styles.header}>
+          <Text style={styles.title}>Statistics</Text>
+          <View style={styles.selector}></View>
+        </View>
+
+        {/* <Skeleton
+          containerStyle={styles.grid}
+          isLoading={true}
+          boneColor='#2e2e2e'
+          highlightColor='#515151'
+          animationDirection='diagonalTopLeft'
+          layout={[
+            { key: "steps", width: "100%", height: 220, marginBottom: 12,borderRadius:20 }, // cardLarge
+            { key: "calories", width: "48%", height: 96, marginBottom: 12 }, // cardSmall
+            { key: "distance", width: "48%", height: 96, marginBottom: 12 }, // cardSmall
+            { key: "sleep", width: "100%", height: 120, marginBottom: 12 }, // cardWide
+            { key: "heartRate", width: "48%", height: 96, marginBottom: 12 }, // cardMedium
+            { key: "workouts", width: "48%", height: 96, marginBottom: 12 }, // cardMedium
+          ]}
         >
-          <Text style={styles.buttonText}>IMPORT</Text>
-        </TouchableOpacity>
+          <View style={styles.grid}>
+            <View style={[styles.card, styles.cardLarge]}>
+              <Text style={styles.cardText}>Steps</Text>
+            </View>
 
-        <TouchableOpacity
-          style={[styles.button, styles.infoButton, { marginTop: 20 }]}
-          onPress={() => { DataLogic.exportToFile(); Haptics.selectionAsync(); }}
-        >
-          <Text style={styles.buttonText}>EXPORT</Text>
-        </TouchableOpacity>
+            <View style={[styles.card, styles.cardSmall]}>
+              <Text style={styles.cardText}>Calories</Text>
+            </View>
+            <View style={[styles.card, styles.cardSmall]}>
+              <Text style={styles.cardText}>Distance</Text>
+            </View>
 
-        <Slider
-          style={{ width: '70%', height: 40, margin: 'auto' }}
-          minimumValue={0}
-          maximumValue={24}
-          value={sliderValue}
-          onValueChange={(value) => {
-            setSliderValue(value);
-            setProgressByTime(DateTime.now().startOf('day').plus({ hour: value }));
-          }}
-        />
+            <View style={[styles.card, styles.cardWide]}>
+              <Text style={styles.cardText}>Sleep</Text>
+            </View>
 
-        {locationLoading ? (
-          <ActivityIndicator size="large" color="#fff" />
-        ) : errorMsg ? (
-          <Text style={styles.errorText}>{errorMsg}</Text>
-        ) : (
-          <Text style={[styles.subtext, styles.validText]}>
-            {location?.coords.latitude.toFixed(4)}, {location?.coords.longitude.toFixed(4)}
-          </Text>
-        )}
-
-        <Text style={styles.subtext}>{sliderValue}</Text>
-        <Text style={styles.subtext}>{displayProgress}</Text>
+            <View style={[styles.card, styles.cardMedium]}>
+              <Text style={styles.cardText}>Heart Rate</Text>
+            </View>
+            <View style={[styles.card, styles.cardMedium]}>
+              <Text style={styles.cardText}>Workouts</Text>
+            </View>
+          </View>
+        </Skeleton> */}
 
       </ScrollView>
     </View>
@@ -108,39 +92,63 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
 
   },
-  title: { fontSize: 28, color: '#fff', marginBottom: 20 },
-  button: {
-    paddingVertical: 15,
-    paddingHorizontal: 40,
-    borderRadius: 30,
-    width: '80%',
+  header: {
+    flexDirection: 'row',
     alignItems: 'center',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    justifyContent: 'space-around',
+    width: '100%',
+    padding: 6,
+    borderColor: "#ffffff99",
+    borderBottomWidth: 2,
   },
-  startButton: {
-    backgroundColor: '#19d1e6',
-  },
-  stopButton: {
-    backgroundColor: '#e61919',
-  },
-  infoButton: {
-    backgroundColor: '#e5e619',
-  },
-  buttonText: {
+  title: {
+    fontSize: 28,
     color: '#fff',
-    fontSize: 18,
-    fontWeight: '900',
-    letterSpacing: 1,
+    fontWeight: '500',
   },
-  subtext: { fontSize: 18, color: '#fff', marginBottom: 5 },
-  validText: {
-    color: '#00e5ff',
+  selector: {
+    backgroundColor: '#2e2e2e',
+    width: 100,
+    height: 40,
+    borderRadius: 40 / 2,
+    borderCurve: "continuous",
   },
-  errorText: {
-    color: '#ff5252',
+
+  grid: {
+    width: "100%",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    padding: 16,
+    gap: 12,
+  },
+  card: {
+    backgroundColor: "#2e2e2e",
+    borderRadius: 24,
+    padding: 16,
+    justifyContent: "center",
+    alignItems: 'flex-start',
+  },
+  cardText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "500"
+  },
+
+  cardSmall: {
+    width: "48%",
+    aspectRatio: 1.5,
+  },
+  cardMedium: {
+    width: "48%",
+    aspectRatio: 1,
+  },
+  cardLarge: {
+    width: "100%",
+    aspectRatio: 1.5,
+  },
+  cardWide: {
+    width: "100%",
+    aspectRatio: 3,
   },
 });

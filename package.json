@@ -7,7 +7,8 @@
     "start": "npx expo start -c",
     "clean": "cd android && gradlew.bat clean && cd ..",
     "android": "npx expo run:android",
-    "ios": "npx expo run:ios"
+    "ios": "npx expo run:ios",
+    "postinstall": "call ./postinstall.bat"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.2.0",
@@ -37,6 +38,7 @@
     "react-native": "0.81.5",
     "react-native-gesture-handler": "~2.28.0",
     "react-native-reanimated": "~4.1.1",
+    "react-native-reanimated-skeleton": "^1.6.0",
     "react-native-safe-area-context": "^5.6.2",
     "react-native-screens": "~4.16.0",
     "react-native-svg": "15.12.1",
