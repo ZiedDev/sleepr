@@ -2,35 +2,32 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-// settings:
-//     - sleep and wake up buffer (Duration)
-//     - target sleep and wake up (ClockSlider)
-//     - stats order?
-//     // advanced
-//     - graph day start  (ClockSlider)
-//     - blur performance 
-//         (lowest, low, balanced, quality)
-//         2       10      20      infinite
-//     // danger
-//     - import (with clear all switch)
-//     - export
-//     - delete data
+import { Duration } from 'luxon';
 
 interface SettingsValues {
-    theme: 'light' | 'dark' | 'system';
-    notifications: boolean;
-    useMetric: boolean;
+    // general
+    sleepBuffer: Duration;
+    wakeBuffer: Duration;
+    sleepTarget: Duration | null;
+    wakeTarget: Duration | null;
+    // statsOrder
+
+    // advanced
+    dayStart: Duration;
+    blurPerformance: 'lowest' | 'low' | 'balanced' | 'quality';
+    //                      2        10         20       infinite
 }
 
 const initialState: SettingsValues = {
-    theme: 'system',
-    notifications: true,
-    useMetric: true,
+    sleepBuffer: Duration.fromObject({ minutes: 5 }),
+    wakeBuffer: Duration.fromObject({ minutes: 5 }),
+    sleepTarget: null,
+    wakeTarget: null,
+    dayStart: Duration.fromObject({ hours: 22 }),
+    blurPerformance: 'balanced',
 };
 
 interface SettingsState extends SettingsValues {
-    setTheme: (theme: 'light' | 'dark' | 'system') => void;
     updateSetting: <K extends keyof SettingsValues>(key: K, value: SettingsValues[K]) => void;
     resetSettings: () => void;
 }
@@ -39,13 +36,7 @@ const useSettings = create<SettingsState>()(
     persist(
         (set) => ({
             ...initialState,
-
-            setTheme: (theme) => set({ theme }),
-
-            // Generic updater for simple toggles
             updateSetting: (key, value) => set((state) => ({ ...state, [key]: value })),
-
-            // Professional Reset: Returns store to initial constants
             resetSettings: () => set(initialState),
         }),
         {
