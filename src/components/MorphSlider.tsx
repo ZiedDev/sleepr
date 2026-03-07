@@ -289,6 +289,7 @@ const styles = StyleSheet.create({
     track: {
         justifyContent: 'center',
         overflow: 'hidden',
+        borderCurve: "continuous",
     },
     trackTextContainer: {
         position: 'absolute',
@@ -307,6 +308,7 @@ const styles = StyleSheet.create({
     morph: {
         alignItems: 'center',
         justifyContent: 'center',
+        borderCurve: "continuous",
     },
     thumbText: {
         position: 'absolute',
@@ -319,5 +321,6 @@ const styles = StyleSheet.create({
     },
     pill: {
         position: 'absolute',
+        borderCurve: "continuous",
     },
 });

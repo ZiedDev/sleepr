@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native
 import * as Haptics from 'expo-haptics';
 import useLocation from '../hooks/useLocation';
 import useColorStore from '../hooks/useColors';
+import Skeleton from "react-native-reanimated-skeleton";
 
 export default function StatsScreen() {
   const [refreshing, setRefreshing] = useState(false);
@@ -22,7 +23,7 @@ export default function StatsScreen() {
   return (
     <View style={styles.container}>
       <ScrollView
-        style={{ width: "100%" }} 
+        style={{ width: "100%" }}
         contentContainerStyle={{ alignItems: 'center' }}
         refreshControl={
           <RefreshControl
@@ -33,10 +34,51 @@ export default function StatsScreen() {
           />
         }
       >
-        <Text style={styles.title}>
-          Lorem ipsum
-          {/* Lorem ipsum dolor sit amet consectetur adipisicing elit. Laboriosam animi fuga, fugit sequi dignissimos dolor commodi cupiditate cumque nihil maxime pariatur at quasi iusto blanditiis amet mollitia accusamus alias suscipit tenetur unde consequuntur itaque quaerat repellat vitae! Repudiandae, quaerat sit. Eaque repudiandae amet porro eligendi beatae vel enim eum fugiat tempora quia magnam consequatur nam dolorem facilis sapiente inventore deleniti necessitatibus error, vitae nostrum? Alias, dolorum.Lorem ipsum dolor sit amet consectetur adipisicing elit. Dolor labore itaque inventore excepturi ut voluptatum delectus nulla beatae sequi consequuntur error doloremque modi repudiandae ducimus dolore nam quas autem eius harum omnis, ullam corrupti molestiae quae incidunt? Eaque libero distinctio consequatur delectus quibusdam adipisci expedita nihil officiis quia qui, quidem id veritatis! Eaque minima recusandae adipisci velit iste explicabo nisi consequuntur amet odio nemo ratione asperiores id dolor, a porro quisquam ullam vero aliquam. Voluptatibus vel doloribus quam esse explicabo fugit architecto veritatis recusandae, ipsa delectus consequuntur dicta quas optio molestias quibusdam, similique sed accusamus! Ab iusto optio exercitationem officiis perspiciatis porro recusandae velit. Hic aliquid, perspiciatis suscipit saepe dicta repudiandae quaerat similique totam pariatur, fugiat illo dolor! Dolorum, magni nam quaerat tempore temporibus vel praesentium, veritatis, quasi harum dicta dolore cupiditate eveniet? Molestiae optio, consectetur iusto quo ipsum aspernatur illo? Sequi, amet. Provident numquam corporis consequatur, quibusdam consectetur tempora deserunt autem, sit minima, atque fuga dolor. Maiores ipsam esse dolor eius dolores quis. Consequuntur repudiandae soluta incidunt deleniti ex pariatur. Pariatur veniam distinctio maxime illo, amet ad tempore iusto mollitia autem nostrum inventore eius, aut, odio est laudantium assumenda? Quasi mollitia doloribus ea, magni dicta similique atque placeat minus? */}
-        </Text>
+
+        <View style={styles.header}>
+          <Text style={styles.title}>Statistics</Text>
+          <View style={styles.selector}></View>
+        </View>
+
+        {/* <Skeleton
+          containerStyle={styles.grid}
+          isLoading={true}
+          boneColor='#2e2e2e'
+          highlightColor='#515151'
+          animationDirection='diagonalTopLeft'
+          layout={[
+            { key: "steps", width: "100%", height: 220, marginBottom: 12,borderRadius:20 }, // cardLarge
+            { key: "calories", width: "48%", height: 96, marginBottom: 12 }, // cardSmall
+            { key: "distance", width: "48%", height: 96, marginBottom: 12 }, // cardSmall
+            { key: "sleep", width: "100%", height: 120, marginBottom: 12 }, // cardWide
+            { key: "heartRate", width: "48%", height: 96, marginBottom: 12 }, // cardMedium
+            { key: "workouts", width: "48%", height: 96, marginBottom: 12 }, // cardMedium
+          ]}
+        >
+          <View style={styles.grid}>
+            <View style={[styles.card, styles.cardLarge]}>
+              <Text style={styles.cardText}>Steps</Text>
+            </View>
+
+            <View style={[styles.card, styles.cardSmall]}>
+              <Text style={styles.cardText}>Calories</Text>
+            </View>
+            <View style={[styles.card, styles.cardSmall]}>
+              <Text style={styles.cardText}>Distance</Text>
+            </View>
+
+            <View style={[styles.card, styles.cardWide]}>
+              <Text style={styles.cardText}>Sleep</Text>
+            </View>
+
+            <View style={[styles.card, styles.cardMedium]}>
+              <Text style={styles.cardText}>Heart Rate</Text>
+            </View>
+            <View style={[styles.card, styles.cardMedium]}>
+              <Text style={styles.cardText}>Workouts</Text>
+            </View>
+          </View>
+        </Skeleton> */}
 
       </ScrollView>
     </View>
@@ -50,5 +92,63 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
 
   },
-  title: { fontSize: 28, color: '#fff', marginBottom: 20 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    width: '100%',
+    padding: 6,
+    borderColor: "#ffffff99",
+    borderBottomWidth: 2,
+  },
+  title: {
+    fontSize: 28,
+    color: '#fff',
+    fontWeight: '500',
+  },
+  selector: {
+    backgroundColor: '#2e2e2e',
+    width: 100,
+    height: 40,
+    borderRadius: 40 / 2,
+    borderCurve: "continuous",
+  },
+
+  grid: {
+    width: "100%",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    padding: 16,
+    gap: 12,
+  },
+  card: {
+    backgroundColor: "#2e2e2e",
+    borderRadius: 24,
+    padding: 16,
+    justifyContent: "center",
+    alignItems: 'flex-start',
+  },
+  cardText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "500"
+  },
+
+  cardSmall: {
+    width: "48%",
+    aspectRatio: 1.5,
+  },
+  cardMedium: {
+    width: "48%",
+    aspectRatio: 1,
+  },
+  cardLarge: {
+    width: "100%",
+    aspectRatio: 1.5,
+  },
+  cardWide: {
+    width: "100%",
+    aspectRatio: 3,
+  },
 });

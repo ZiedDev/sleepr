@@ -196,6 +196,7 @@ const styles = StyleSheet.create({
   button: {
     paddingVertical: 15,
     paddingHorizontal: 40,
+    borderCurve: "continuous",
     borderRadius: 30,
     width: '80%',
     alignItems: 'center',
