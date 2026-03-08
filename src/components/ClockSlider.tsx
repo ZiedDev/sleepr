@@ -10,83 +10,101 @@ const AnimatedPath = Animated.createAnimatedComponent(Path);
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 interface ClockSliderProps {
-    mode?: 'single' | 'range';
+    // Mode
+    size: number;
+    mode: 'single' | 'range';
     locked?: boolean;
 
-    // rad 0 -> 2*PI clockwise from positive x-axis
-    startAngle?: SharedValue<number>;
-    endAngle?: SharedValue<number>;
+    // Updates
     onValueChange?: (start: number, end: number) => void;
     onValueSet?: (start: number, end: number) => void;
 
-    startTargetAngle?: number | null;
-    endTargetAngle?: number | null;
-
-    startIcon?: React.ReactNode;
-    endIcon?: React.ReactNode;
-    iconSize?: number;
-
-    step?: number;
-    quantize?: boolean;
-    forwardDifference?: number;
-    backwardDifference?: number;
-
-    size: number;
+    // Knobs
     touchSlop?: number;
     knobRadius?: number;
-    trackWidth?: number;
+    iconSize?: number;
+
+    startAngle?: SharedValue<number>; // rad 0 -> 2*PI clockwise from positive x-axis
+    startColor?: string;
+    startIcon?: React.ReactNode;
+
+    endAngle?: SharedValue<number>;
+    endKnobColor?: string;
+    endIcon?: React.ReactNode;
+
+    startTargetAngle?: number | null;
+    startTargetColor?: string;
+    startTargetIcon?: React.ReactNode;
+
+    endTargetAngle?: number | null;
+    endTargetColor?: string;
+    endTargetIcon?: React.ReactNode;
+
+    // Arc
     arcWidth?: number;
+    arcColor?: string;
+
+    // Track
+    trackWidth?: number;
+    trackColor?: string;
     tickOptions?: {
         div: number;
         length: number;
         color: string;
     }[];
 
-    trackColor?: string;
-    tickColor?: string;
-    arcColor?: string;
-    startKnobColor?: string;
-    endKnobColor?: string;
+    // Movement
+    step?: number;
+    quantize?: boolean;
+    forwardDifference?: number;
+    backwardDifference?: number;
 
     style?: StyleProp<ViewStyle>;
 }
 
 export default function ClockSlider({
-    mode = 'range',
+    size,
+    mode,
     locked = false,
 
-    startAngle = useSharedValue(Math.PI * 1.5),
-    endAngle = useSharedValue(Math.PI * 0.5),
     onValueChange,
     onValueSet,
 
-    startTargetAngle = null,
-    endTargetAngle = null,
-
-    startIcon,
-    endIcon,
-    iconSize = 25,
-
-    step = (2 * Math.PI) / (12 * 60) * 30, // 30 minute increments
-    quantize = true,
-    forwardDifference = 2,
-    backwardDifference = 4,
-
-    size,
     touchSlop = 10,
     knobRadius = 15,
-    trackWidth = 30,
+    iconSize = 25,
+
+    startAngle = useSharedValue(Math.PI * 1.5),
+    startColor = "#ee872d",
+    startIcon,
+
+    endAngle = useSharedValue(Math.PI * 0.5),
+    endKnobColor = "#ee872d",
+    endIcon,
+
+    startTargetAngle = null,
+    startTargetColor,
+    startTargetIcon,
+
+    endTargetAngle = null,
+    endTargetColor,
+    endTargetIcon,
+
     arcWidth = 30,
+    arcColor = "#f19848",
+
+    trackWidth = 30,
+    trackColor = "#222",
     tickOptions = [
         { div: 4, length: 14, color: "#444444ff" },
         { div: 2, length: 8, color: "#44444499" },
         { div: 1, length: 4, color: "#44444499" }
     ],
 
-    trackColor = "#222",
-    arcColor = "#f19848",
-    startKnobColor = "#ee872d",
-    endKnobColor = "#ee872d",
+    step = (2 * Math.PI) / (12 * 60) * 30, // 30 minute increments
+    quantize = true,
+    forwardDifference = 2,
+    backwardDifference = 4,
 
     style,
 }: ClockSliderProps) {
@@ -306,7 +324,7 @@ export default function ClockSlider({
                     }
 
                     {/* Start Knob */}
-                    <AnimatedCircle animatedProps={startKnobProps} r={knobRadius} fill={startKnobColor} />
+                    <AnimatedCircle animatedProps={startKnobProps} r={knobRadius} fill={startColor} />
 
                     {/* End Knob */}
                     {mode === 'range' &&

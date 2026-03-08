@@ -89,6 +89,7 @@ export default function SettingsScreen() {
           />
         }
       >
+        <ClockSlider mode='range' size={200} />
         <AnimatedTextInput
           underlineColorAndroid="transparent"
           editable={false}
@@ -97,6 +98,7 @@ export default function SettingsScreen() {
           style={{ fontSize: 24, fontWeight: 'bold', color: '#fff' }}
         />
         <ClockSlider
+          mode='range'
           size={Dimensions.get('window').width * 0.7}
           // onValueChange={(s, e) => setClock(getStrFromRad(s, e))}
 
@@ -122,13 +124,16 @@ export default function SettingsScreen() {
 
           startAngle={singleAngle}
 
+          startTargetAngle={Math.PI * 1.5}
+          endTargetAngle={0}
+
           size={Dimensions.get('window').width * 0.5}
           // onValueChange={(s) => { console.log(s); }}
 
           step={(2 * Math.PI) / (24 * 60) * 30}
           // quantize={false}
 
-          startKnobColor='#27b2fc'
+          startColor='#27b2fc'
           trackColor='#2e2e2e'
 
           startIcon={
