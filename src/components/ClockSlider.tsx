@@ -355,7 +355,7 @@ export default function ClockSlider({
                     }
 
                     {/* Target Start Knob */}
-                    {mode === 'range' && startTargetAngle &&
+                    {startTargetAngle &&
                         <AnimatedCircle
                             {...((p) => ({ cx: p.x, cy: p.y }))(polarToXY(startTargetAngle))}
                             r={knobRadius} fill={startTargetColor}
@@ -386,18 +386,36 @@ export default function ClockSlider({
                 )}
 
                 {/* Start Target Icon */}
-                {/* {startTargetIcon && (
-                    <View style={startIconProps}>
+                {startTargetAngle && startTargetIcon && (
+                    <View style={(() => {
+                        const { x, y } = polarToXY(startTargetAngle);
+                        return {
+                            position: 'absolute',
+                            left: x - iconSize / 2,
+                            top: y - iconSize / 2,
+                            width: iconSize,
+                            height: iconSize,
+                        };
+                    })()}>
                         {startTargetIcon}
                     </View>
-                )} */}
+                )}
 
                 {/* End Target Icon */}
-                {/* {endTargetIcon && (
-                    <View style={endIconProps}>
+                {mode === 'range' && endTargetAngle && endTargetIcon && (
+                    <View style={(() => {
+                        const { x, y } = polarToXY(endTargetAngle);
+                        return {
+                            position: 'absolute',
+                            left: x - iconSize / 2,
+                            top: y - iconSize / 2,
+                            width: iconSize,
+                            height: iconSize,
+                        };
+                    })()}>
                         {endTargetIcon}
                     </View>
-                )} */}
+                )}
             </View>
         </GestureDetector>
     );

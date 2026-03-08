@@ -89,7 +89,20 @@ export default function SettingsScreen() {
           />
         }
       >
-        <ClockSlider mode='range' size={200} startTargetAngle={Math.PI * 1.5} endTargetAngle={Math.PI * 2} />
+        <ClockSlider mode='range' size={200}
+          startTargetAngle={Math.PI * 1.5}
+          endTargetAngle={Math.PI * 2}
+          startTargetIcon={
+            <Svg width={25} height={25} viewBox="0 0 24 24">
+              <Path fill="#812812" d="M7 12.5a3 3 0 1 0-3-3a3 3 0 0 0 3 3m0-4a1 1 0 1 1-1 1a1 1 0 0 1 1-1m13-2h-8a1 1 0 0 0-1 1v6H3v-8a1 1 0 0 0-2 0v13a1 1 0 0 0 2 0v-3h18v3a1 1 0 0 0 2 0v-9a3 3 0 0 0-3-3m1 7h-8v-5h7a1 1 0 0 1 1 1Z" />
+            </Svg>
+          }
+          endTargetIcon={
+            <Svg width={25} height={25} viewBox="0 0 24 24">
+              <Path fill="#812812" d="M7 12.5a3 3 0 1 0-3-3a3 3 0 0 0 3 3m0-4a1 1 0 1 1-1 1a1 1 0 0 1 1-1m13-2h-8a1 1 0 0 0-1 1v6H3v-8a1 1 0 0 0-2 0v13a1 1 0 0 0 2 0v-3h18v3a1 1 0 0 0 2 0v-9a3 3 0 0 0-3-3m1 7h-8v-5h7a1 1 0 0 1 1 1Z" />
+            </Svg>
+          }
+        />
         <AnimatedTextInput
           underlineColorAndroid="transparent"
           editable={false}
