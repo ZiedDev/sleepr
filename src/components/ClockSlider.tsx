@@ -22,6 +22,7 @@ interface ClockSliderProps {
     // Knobs
     touchSlop?: number;
     knobRadius?: number;
+    targetKnobRadius?: number;
     iconSize?: number;
 
     startAngle?: SharedValue<number>; // rad 0 -> 2*PI clockwise from positive x-axis
@@ -75,6 +76,7 @@ export default function ClockSlider({
 
     touchSlop = 10,
     knobRadius = 15,
+    targetKnobRadius = 0,
     iconSize = 25,
 
     startAngle = useSharedValue(Math.PI * 1.5),
@@ -96,8 +98,8 @@ export default function ClockSlider({
     arcWidth = 30,
     arcColor = "#f19646",
 
-    arcTargetWidth = 15,
-    arcTargetColor = "#468af1",
+    arcTargetWidth = 10,
+    arcTargetColor = "#468af1cc",
 
     trackWidth = 30,
     trackColor = "#222",
@@ -342,7 +344,7 @@ export default function ClockSlider({
 
                     {/* Target Arc */}
                     {mode === 'range' && startTargetAngle && endTargetAngle &&
-                        <AnimatedPath
+                        <Path
                             {...(() => {
                                 const { x: startX, y: startY } = polarToXY(startTargetAngle);
                                 const { x: endX, y: endY } = polarToXY(endTargetAngle);
@@ -350,7 +352,7 @@ export default function ClockSlider({
 
                                 return { d: `M ${startX} ${startY} A ${RADIUS} ${RADIUS} 0 ${largeArc} 1 ${endX} ${endY}` };
                             })()}
-                            stroke={arcTargetColor} strokeWidth={arcTargetWidth} fill="none"
+                            stroke={arcTargetColor} strokeWidth={arcTargetWidth} strokeLinecap="round" fill="none"
                         />
                     }
 
@@ -358,7 +360,7 @@ export default function ClockSlider({
                     {startTargetAngle &&
                         <AnimatedCircle
                             {...((p) => ({ cx: p.x, cy: p.y }))(polarToXY(startTargetAngle))}
-                            r={knobRadius} fill={startTargetColor}
+                            r={targetKnobRadius} fill={startTargetColor}
                         />
                     }
 
@@ -366,7 +368,7 @@ export default function ClockSlider({
                     {mode === 'range' && endTargetAngle &&
                         <AnimatedCircle
                             {...((p) => ({ cx: p.x, cy: p.y }))(polarToXY(endTargetAngle))}
-                            r={knobRadius} fill={endTargetColor}
+                            r={targetKnobRadius} fill={endTargetColor}
                         />
                     }
                 </Svg>
