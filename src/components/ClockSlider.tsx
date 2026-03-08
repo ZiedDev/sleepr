@@ -44,6 +44,9 @@ interface ClockSliderProps {
     arcWidth?: number;
     arcColor?: string;
 
+    arcTargetWidth?: number;
+    arcTargetColor?: string;
+
     // Track
     trackWidth?: number;
     trackColor?: string;
@@ -75,23 +78,26 @@ export default function ClockSlider({
     iconSize = 25,
 
     startAngle = useSharedValue(Math.PI * 1.5),
-    startColor = "#ee872d",
+    startColor = "#ee882f",
     startIcon,
 
     endAngle = useSharedValue(Math.PI * 0.5),
-    endKnobColor = "#ee872d",
+    endKnobColor = "#ee882f",
     endIcon,
 
     startTargetAngle = null,
-    startTargetColor,
+    startTargetColor = "#2f7cee",
     startTargetIcon,
 
     endTargetAngle = null,
-    endTargetColor,
+    endTargetColor = "#2f7cee",
     endTargetIcon,
 
     arcWidth = 30,
-    arcColor = "#f19848",
+    arcColor = "#f19646",
+
+    arcTargetWidth = 15,
+    arcTargetColor = "#468af1",
 
     trackWidth = 30,
     trackColor = "#222",
@@ -116,6 +122,7 @@ export default function ClockSlider({
     const activeKnob = useSharedValue<'start' | 'end' | 'middle' | null>(null);
     const midAngle = useSharedValue<number>(0);
 
+    // Helpers
     const handleUpdate = (s: number, e: number) => {
         'worklet';
         if (onValueChange) scheduleOnRN(onValueChange, s, e);
@@ -143,6 +150,7 @@ export default function ClockSlider({
         return diff;
     };
 
+    // Gesture
     const pan = Gesture.Pan()
         .enabled(!locked)
         .onStart((event) => {
@@ -252,6 +260,7 @@ export default function ClockSlider({
         });
 
 
+    // Props
     const startKnobProps = useAnimatedProps(() => {
         const { x, y } = polarToXY(startAngle.value);
         return { cx: x, cy: y };
@@ -330,6 +339,36 @@ export default function ClockSlider({
                     {mode === 'range' &&
                         <AnimatedCircle animatedProps={endKnobProps} r={knobRadius} fill={endKnobColor} />
                     }
+
+                    {/* Target Arc */}
+                    {mode === 'range' && startTargetAngle && endTargetAngle &&
+                        <AnimatedPath
+                            {...(() => {
+                                const { x: startX, y: startY } = polarToXY(startTargetAngle);
+                                const { x: endX, y: endY } = polarToXY(endTargetAngle);
+                                const largeArc = absoluteAngleDelta(startTargetAngle, endTargetAngle) > Math.PI ? 1 : 0;
+
+                                return { d: `M ${startX} ${startY} A ${RADIUS} ${RADIUS} 0 ${largeArc} 1 ${endX} ${endY}` };
+                            })()}
+                            stroke={arcTargetColor} strokeWidth={arcTargetWidth} fill="none"
+                        />
+                    }
+
+                    {/* Target Start Knob */}
+                    {mode === 'range' && startTargetAngle &&
+                        <AnimatedCircle
+                            {...((p) => ({ cx: p.x, cy: p.y }))(polarToXY(startTargetAngle))}
+                            r={knobRadius} fill={startTargetColor}
+                        />
+                    }
+
+                    {/* Target End Knob */}
+                    {mode === 'range' && endTargetAngle &&
+                        <AnimatedCircle
+                            {...((p) => ({ cx: p.x, cy: p.y }))(polarToXY(endTargetAngle))}
+                            r={knobRadius} fill={endTargetColor}
+                        />
+                    }
                 </Svg>
 
                 {/* Start Icon */}
@@ -345,6 +384,20 @@ export default function ClockSlider({
                         {endIcon}
                     </Animated.View>
                 )}
+
+                {/* Start Target Icon */}
+                {/* {startTargetIcon && (
+                    <View style={startIconProps}>
+                        {startTargetIcon}
+                    </View>
+                )} */}
+
+                {/* End Target Icon */}
+                {/* {endTargetIcon && (
+                    <View style={endIconProps}>
+                        {endTargetIcon}
+                    </View>
+                )} */}
             </View>
         </GestureDetector>
     );

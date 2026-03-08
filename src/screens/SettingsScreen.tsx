@@ -89,7 +89,7 @@ export default function SettingsScreen() {
           />
         }
       >
-        <ClockSlider mode='range' size={200} />
+        <ClockSlider mode='range' size={200} startTargetAngle={Math.PI * 1.5} endTargetAngle={Math.PI * 2} />
         <AnimatedTextInput
           underlineColorAndroid="transparent"
           editable={false}
