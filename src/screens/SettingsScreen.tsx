@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, ActivityIndicator, Dimensions, Text, TextInput } from 'react-native';
 import ClockSlider from '../components/ClockSlider'
-import ClockSliderSingle from '../components/ClockSliderSingle';;
 import useColorStore from '../hooks/useColors';
 import Svg, { Path } from 'react-native-svg';
 import { DateTime } from 'luxon';
@@ -116,7 +115,9 @@ export default function SettingsScreen() {
             </Svg>
           }
         />
-        <ClockSliderSingle
+        <ClockSlider
+          mode='single'
+          // locked
           style={{ marginTop: 10 }}
 
           startAngle={singleAngle}

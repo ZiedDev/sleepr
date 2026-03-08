@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import Svg, { Circle, Line, Path } from 'react-native-svg';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { useAnimatedProps, useSharedValue, runOnJS, useAnimatedStyle, SharedValue } from 'react-native-reanimated';
+import Animated, { useAnimatedProps, useSharedValue, useAnimatedStyle, SharedValue } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { scheduleOnRN } from 'react-native-worklets';
 
@@ -10,11 +10,17 @@ const AnimatedPath = Animated.createAnimatedComponent(Path);
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 interface ClockSliderProps {
+    mode?: 'single' | 'range';
+    locked?: boolean;
+
     // rad 0 -> 2*PI clockwise from positive x-axis
     startAngle?: SharedValue<number>;
     endAngle?: SharedValue<number>;
     onValueChange?: (start: number, end: number) => void;
     onValueSet?: (start: number, end: number) => void;
+
+    startTargetAngle?: number | null;
+    endTargetAngle?: number | null;
 
     startIcon?: React.ReactNode;
     endIcon?: React.ReactNode;
@@ -46,10 +52,16 @@ interface ClockSliderProps {
 }
 
 export default function ClockSlider({
+    mode = 'range',
+    locked = false,
+
     startAngle = useSharedValue(Math.PI * 1.5),
     endAngle = useSharedValue(Math.PI * 0.5),
     onValueChange,
     onValueSet,
+
+    startTargetAngle = null,
+    endTargetAngle = null,
 
     startIcon,
     endIcon,
@@ -114,6 +126,7 @@ export default function ClockSlider({
     };
 
     const pan = Gesture.Pan()
+        .enabled(!locked)
         .onStart((event) => {
             const x = event.x - CENTER;
             const y = event.y - CENTER;
@@ -128,6 +141,8 @@ export default function ClockSlider({
                 activeKnob.value = 'start';
                 return;
             }
+
+            if (mode === 'single') return;
 
             const { x: endX, y: endY } = polarToXY(endAngle.value);
             if (Math.hypot(event.x - endX, event.y - endY) < knobRadius + touchSlop) {
@@ -165,17 +180,20 @@ export default function ClockSlider({
                 const normalizedAngle = (quantizedAngle + 2 * Math.PI) % (2 * Math.PI);
 
                 if (normalizedAngle !== startAngle.value) {
-                    const diff = signedAngleDelta(normalizedAngle, endAngle.value);
+                    if (mode === 'range') {
+                        const diff = signedAngleDelta(normalizedAngle, endAngle.value);
 
-                    if (diff > 0 && diff < MIN_DIFF_FORWARD)
-                        endAngle.value = (normalizedAngle + MIN_DIFF_FORWARD) % (2 * Math.PI);
-                    else if (diff <= 0 && -diff < MIN_DIFF_BACKWARD)
-                        endAngle.value = (normalizedAngle - MIN_DIFF_BACKWARD) % (2 * Math.PI);
+                        if (diff > 0 && diff < MIN_DIFF_FORWARD)
+                            endAngle.value = (normalizedAngle + MIN_DIFF_FORWARD) % (2 * Math.PI);
+                        else if (diff <= 0 && -diff < MIN_DIFF_BACKWARD)
+                            endAngle.value = (normalizedAngle - MIN_DIFF_BACKWARD) % (2 * Math.PI);
+                    }
 
                     startAngle.value = normalizedAngle;
                     handleUpdate(startAngle.value, endAngle.value);
                 }
             }
+            else if (mode === 'single') return;
             else if (activeKnob.value == 'end') {
                 const delta = signedAngleDelta(endAngle.value, fingerAngle);
 
@@ -283,13 +301,17 @@ export default function ClockSlider({
                     ))}
 
                     {/* Arc */}
-                    <AnimatedPath animatedProps={arcProps} stroke={arcColor} strokeWidth={arcWidth} fill="none" />
+                    {mode === 'range' &&
+                        <AnimatedPath animatedProps={arcProps} stroke={arcColor} strokeWidth={arcWidth} fill="none" />
+                    }
 
                     {/* Start Knob */}
                     <AnimatedCircle animatedProps={startKnobProps} r={knobRadius} fill={startKnobColor} />
 
                     {/* End Knob */}
-                    <AnimatedCircle animatedProps={endKnobProps} r={knobRadius} fill={endKnobColor} />
+                    {mode === 'range' &&
+                        <AnimatedCircle animatedProps={endKnobProps} r={knobRadius} fill={endKnobColor} />
+                    }
                 </Svg>
 
                 {/* Start Icon */}
