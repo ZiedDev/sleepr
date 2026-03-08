@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import Svg, { Circle, Line, Path } from 'react-native-svg';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { useAnimatedProps, useSharedValue, runOnJS, useAnimatedStyle, SharedValue } from 'react-native-reanimated';
+import Animated, { useAnimatedProps, useSharedValue, useAnimatedStyle, SharedValue } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { scheduleOnRN } from 'react-native-worklets';
 
@@ -10,71 +10,109 @@ const AnimatedPath = Animated.createAnimatedComponent(Path);
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 interface ClockSliderProps {
-    // rad 0 -> 2*PI clockwise from positive x-axis
-    startAngle?: SharedValue<number>;
-    endAngle?: SharedValue<number>;
+    // Mode
+    size: number;
+    mode: 'single' | 'range';
+    locked?: boolean;
+
+    // Updates
     onValueChange?: (start: number, end: number) => void;
     onValueSet?: (start: number, end: number) => void;
 
-    startIcon?: React.ReactNode;
-    endIcon?: React.ReactNode;
-    iconSize?: number;
-
-    step?: number;
-    quantize?: boolean;
-    forwardDifference?: number;
-    backwardDifference?: number;
-
-    size: number;
+    // Knobs
     touchSlop?: number;
     knobRadius?: number;
-    trackWidth?: number;
+    targetKnobRadius?: number;
+    iconSize?: number;
+
+    startAngle?: SharedValue<number>; // rad 0 -> 2*PI clockwise from positive x-axis
+    startColor?: string;
+    startIcon?: React.ReactNode;
+
+    endAngle?: SharedValue<number>;
+    endKnobColor?: string;
+    endIcon?: React.ReactNode;
+
+    startTargetAngle?: number | null;
+    startTargetColor?: string;
+    startTargetIcon?: React.ReactNode;
+
+    endTargetAngle?: number | null;
+    endTargetColor?: string;
+    endTargetIcon?: React.ReactNode;
+
+    // Arc
     arcWidth?: number;
+    arcColor?: string;
+
+    arcTargetWidth?: number;
+    arcTargetColor?: string;
+
+    // Track
+    trackWidth?: number;
+    trackColor?: string;
     tickOptions?: {
         div: number;
         length: number;
         color: string;
     }[];
 
-    trackColor?: string;
-    tickColor?: string;
-    arcColor?: string;
-    startKnobColor?: string;
-    endKnobColor?: string;
+    // Movement
+    step?: number;
+    quantize?: boolean;
+    forwardDifference?: number;
+    backwardDifference?: number;
 
     style?: StyleProp<ViewStyle>;
 }
 
 export default function ClockSlider({
-    startAngle = useSharedValue(Math.PI * 1.5),
-    endAngle = useSharedValue(Math.PI * 0.5),
+    size,
+    mode,
+    locked = false,
+
     onValueChange,
     onValueSet,
 
-    startIcon,
-    endIcon,
-    iconSize = 25,
-
-    step = (2 * Math.PI) / (12 * 60) * 30, // 30 minute increments
-    quantize = true,
-    forwardDifference = 2,
-    backwardDifference = 4,
-
-    size,
     touchSlop = 10,
     knobRadius = 15,
-    trackWidth = 30,
+    targetKnobRadius = 0,
+    iconSize = 25,
+
+    startAngle = useSharedValue(Math.PI * 1.5),
+    startColor = "#ee882f",
+    startIcon,
+
+    endAngle = useSharedValue(Math.PI * 0.5),
+    endKnobColor = "#ee882f",
+    endIcon,
+
+    startTargetAngle = null,
+    startTargetColor = "#2f7cee",
+    startTargetIcon,
+
+    endTargetAngle = null,
+    endTargetColor = "#2f7cee",
+    endTargetIcon,
+
     arcWidth = 30,
+    arcColor = "#f19646",
+
+    arcTargetWidth = 10,
+    arcTargetColor = "#468af1cc",
+
+    trackWidth = 30,
+    trackColor = "#222",
     tickOptions = [
         { div: 4, length: 14, color: "#444444ff" },
         { div: 2, length: 8, color: "#44444499" },
         { div: 1, length: 4, color: "#44444499" }
     ],
 
-    trackColor = "#222",
-    arcColor = "#f19848",
-    startKnobColor = "#ee872d",
-    endKnobColor = "#ee872d",
+    step = (2 * Math.PI) / (12 * 60) * 30, // 30 minute increments
+    quantize = true,
+    forwardDifference = 2,
+    backwardDifference = 4,
 
     style,
 }: ClockSliderProps) {
@@ -86,6 +124,7 @@ export default function ClockSlider({
     const activeKnob = useSharedValue<'start' | 'end' | 'middle' | null>(null);
     const midAngle = useSharedValue<number>(0);
 
+    // Helpers
     const handleUpdate = (s: number, e: number) => {
         'worklet';
         if (onValueChange) scheduleOnRN(onValueChange, s, e);
@@ -113,7 +152,9 @@ export default function ClockSlider({
         return diff;
     };
 
+    // Gesture
     const pan = Gesture.Pan()
+        .enabled(!locked)
         .onStart((event) => {
             const x = event.x - CENTER;
             const y = event.y - CENTER;
@@ -128,6 +169,8 @@ export default function ClockSlider({
                 activeKnob.value = 'start';
                 return;
             }
+
+            if (mode === 'single') return;
 
             const { x: endX, y: endY } = polarToXY(endAngle.value);
             if (Math.hypot(event.x - endX, event.y - endY) < knobRadius + touchSlop) {
@@ -165,17 +208,20 @@ export default function ClockSlider({
                 const normalizedAngle = (quantizedAngle + 2 * Math.PI) % (2 * Math.PI);
 
                 if (normalizedAngle !== startAngle.value) {
-                    const diff = signedAngleDelta(normalizedAngle, endAngle.value);
+                    if (mode === 'range') {
+                        const diff = signedAngleDelta(normalizedAngle, endAngle.value);
 
-                    if (diff > 0 && diff < MIN_DIFF_FORWARD)
-                        endAngle.value = (normalizedAngle + MIN_DIFF_FORWARD) % (2 * Math.PI);
-                    else if (diff <= 0 && -diff < MIN_DIFF_BACKWARD)
-                        endAngle.value = (normalizedAngle - MIN_DIFF_BACKWARD) % (2 * Math.PI);
+                        if (diff > 0 && diff < MIN_DIFF_FORWARD)
+                            endAngle.value = (normalizedAngle + MIN_DIFF_FORWARD) % (2 * Math.PI);
+                        else if (diff <= 0 && -diff < MIN_DIFF_BACKWARD)
+                            endAngle.value = (normalizedAngle - MIN_DIFF_BACKWARD) % (2 * Math.PI);
+                    }
 
                     startAngle.value = normalizedAngle;
                     handleUpdate(startAngle.value, endAngle.value);
                 }
             }
+            else if (mode === 'single') return;
             else if (activeKnob.value == 'end') {
                 const delta = signedAngleDelta(endAngle.value, fingerAngle);
 
@@ -216,6 +262,7 @@ export default function ClockSlider({
         });
 
 
+    // Props
     const startKnobProps = useAnimatedProps(() => {
         const { x, y } = polarToXY(startAngle.value);
         return { cx: x, cy: y };
@@ -283,13 +330,47 @@ export default function ClockSlider({
                     ))}
 
                     {/* Arc */}
-                    <AnimatedPath animatedProps={arcProps} stroke={arcColor} strokeWidth={arcWidth} fill="none" />
+                    {mode === 'range' &&
+                        <AnimatedPath animatedProps={arcProps} stroke={arcColor} strokeWidth={arcWidth} fill="none" />
+                    }
 
                     {/* Start Knob */}
-                    <AnimatedCircle animatedProps={startKnobProps} r={knobRadius} fill={startKnobColor} />
+                    <AnimatedCircle animatedProps={startKnobProps} r={knobRadius} fill={startColor} />
 
                     {/* End Knob */}
-                    <AnimatedCircle animatedProps={endKnobProps} r={knobRadius} fill={endKnobColor} />
+                    {mode === 'range' &&
+                        <AnimatedCircle animatedProps={endKnobProps} r={knobRadius} fill={endKnobColor} />
+                    }
+
+                    {/* Target Arc */}
+                    {mode === 'range' && startTargetAngle && endTargetAngle &&
+                        <Path
+                            {...(() => {
+                                const { x: startX, y: startY } = polarToXY(startTargetAngle);
+                                const { x: endX, y: endY } = polarToXY(endTargetAngle);
+                                const largeArc = absoluteAngleDelta(startTargetAngle, endTargetAngle) > Math.PI ? 1 : 0;
+
+                                return { d: `M ${startX} ${startY} A ${RADIUS} ${RADIUS} 0 ${largeArc} 1 ${endX} ${endY}` };
+                            })()}
+                            stroke={arcTargetColor} strokeWidth={arcTargetWidth} strokeLinecap="round" fill="none"
+                        />
+                    }
+
+                    {/* Target Start Knob */}
+                    {startTargetAngle &&
+                        <AnimatedCircle
+                            {...((p) => ({ cx: p.x, cy: p.y }))(polarToXY(startTargetAngle))}
+                            r={targetKnobRadius} fill={startTargetColor}
+                        />
+                    }
+
+                    {/* Target End Knob */}
+                    {mode === 'range' && endTargetAngle &&
+                        <AnimatedCircle
+                            {...((p) => ({ cx: p.x, cy: p.y }))(polarToXY(endTargetAngle))}
+                            r={targetKnobRadius} fill={endTargetColor}
+                        />
+                    }
                 </Svg>
 
                 {/* Start Icon */}
@@ -304,6 +385,38 @@ export default function ClockSlider({
                     <Animated.View style={endIconProps}>
                         {endIcon}
                     </Animated.View>
+                )}
+
+                {/* Start Target Icon */}
+                {startTargetAngle && startTargetIcon && (
+                    <View style={(() => {
+                        const { x, y } = polarToXY(startTargetAngle);
+                        return {
+                            position: 'absolute',
+                            left: x - iconSize / 2,
+                            top: y - iconSize / 2,
+                            width: iconSize,
+                            height: iconSize,
+                        };
+                    })()}>
+                        {startTargetIcon}
+                    </View>
+                )}
+
+                {/* End Target Icon */}
+                {mode === 'range' && endTargetAngle && endTargetIcon && (
+                    <View style={(() => {
+                        const { x, y } = polarToXY(endTargetAngle);
+                        return {
+                            position: 'absolute',
+                            left: x - iconSize / 2,
+                            top: y - iconSize / 2,
+                            width: iconSize,
+                            height: iconSize,
+                        };
+                    })()}>
+                        {endTargetIcon}
+                    </View>
                 )}
             </View>
         </GestureDetector>

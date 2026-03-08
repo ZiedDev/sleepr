@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, ActivityIndicator, Dimensions, Text, TextInput } from 'react-native';
 import ClockSlider from '../components/ClockSlider'
-import ClockSliderSingle from '../components/ClockSliderSingle';;
 import useColorStore from '../hooks/useColors';
 import Svg, { Path } from 'react-native-svg';
 import { DateTime } from 'luxon';
@@ -90,6 +89,10 @@ export default function SettingsScreen() {
           />
         }
       >
+        <ClockSlider mode='range' size={200}
+          startTargetAngle={Math.PI * 1.5}
+          endTargetAngle={Math.PI * 2}
+        />
         <AnimatedTextInput
           underlineColorAndroid="transparent"
           editable={false}
@@ -98,6 +101,7 @@ export default function SettingsScreen() {
           style={{ fontSize: 24, fontWeight: 'bold', color: '#fff' }}
         />
         <ClockSlider
+          mode='range'
           size={Dimensions.get('window').width * 0.7}
           // onValueChange={(s, e) => setClock(getStrFromRad(s, e))}
 
@@ -116,10 +120,15 @@ export default function SettingsScreen() {
             </Svg>
           }
         />
-        <ClockSliderSingle
+        <ClockSlider
+          mode='single'
+          // locked
           style={{ marginTop: 10 }}
 
           startAngle={singleAngle}
+
+          startTargetAngle={Math.PI * 1.5}
+          endTargetAngle={0}
 
           size={Dimensions.get('window').width * 0.5}
           // onValueChange={(s) => { console.log(s); }}
@@ -127,7 +136,7 @@ export default function SettingsScreen() {
           step={(2 * Math.PI) / (24 * 60) * 30}
           // quantize={false}
 
-          startKnobColor='#27b2fc'
+          startColor='#27b2fc'
           trackColor='#2e2e2e'
 
           startIcon={
