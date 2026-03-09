@@ -56,7 +56,11 @@ export default function HomeScreen({ fadeOutNav }: { fadeOutNav: SharedValue<num
         translucent
       />
 
-      <StaggeredText sentence='Hello World! My name is 67.'/>
+      <StaggeredText
+        sentence='Hello World! My name is 67.'
+        style={{ color: 'white' }}
+        containerStyle={{ marginBottom: 100 }}
+      />
 
       <MorphSlider
         isInitialComplete={isTracking}
