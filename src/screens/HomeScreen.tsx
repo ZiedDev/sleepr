@@ -9,6 +9,7 @@ import { Easing, SharedValue, useDerivedValue, withDelay, withSpring, withTiming
 import { StatusBar } from 'expo-status-bar';
 import { scheduleOnRN } from 'react-native-worklets';
 import * as Haptics from 'expo-haptics';
+import StaggeredText from '../components/StaggeredText';
 
 export default function HomeScreen({ fadeOutNav }: { fadeOutNav: SharedValue<number> }) {
   useEffect(() => {
@@ -46,6 +47,7 @@ export default function HomeScreen({ fadeOutNav }: { fadeOutNav: SharedValue<num
 
   return (
     <View style={styles.container}>
+
       <StatusBar
         hidden={statusbarHide}
         style='light'
@@ -53,6 +55,9 @@ export default function HomeScreen({ fadeOutNav }: { fadeOutNav: SharedValue<num
         animated={true}
         translucent
       />
+
+      <StaggeredText sentence='Hello World! My name is 67.'/>
+
       <MorphSlider
         isInitialComplete={isTracking}
         trackWidth={0.6944444444 * Dimensions.get('screen').width}
@@ -82,6 +87,7 @@ export default function HomeScreen({ fadeOutNav }: { fadeOutNav: SharedValue<num
           }
         ]}
       />
+
     </View>
   );
 }
