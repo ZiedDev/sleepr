@@ -1,11 +1,20 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, Dimensions } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import useLocation from '../hooks/useLocation';
 import useColorStore from '../hooks/useColors';
 import Skeleton from "react-native-reanimated-skeleton";
+import { SleepLogic, StatsLogic } from '../db/logic';
+import { DateTime } from 'luxon';
+import { SleepSessionRecord } from '../db/types';
+import Averages from '../components/Stats/Averages'
 
 export default function StatsScreen() {
+  useEffect(() => {
+    useColorStore.getState().setBlur(0.8);
+  }, []);
+
+  // Refresh
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
@@ -16,9 +25,24 @@ export default function StatsScreen() {
     setRefreshing(false);
   }, []);
 
+  // Stats
+  const [isLoading, setLoading] = useState(true);
+  const now = DateTime.now();
+  const [range, setRange] = useState({
+    rangeStart: now.minus({ year: 1 }),
+    rangeEnd: now,
+  });
+  const [sessions, setSessions] = useState<SleepSessionRecord[]>([]);
+
   useEffect(() => {
-    useColorStore.getState().setBlur(0.8);
-  }, []);
+    const getStats = async () => {
+      setLoading(true);
+      const sessions = await SleepLogic.list(range);
+      setSessions(sessions);
+      setLoading(false);
+    }
+    getStats();
+  }, [range]);
 
   return (
     <View style={styles.container}>
@@ -26,12 +50,7 @@ export default function StatsScreen() {
         style={{ width: "100%" }}
         contentContainerStyle={{ alignItems: 'center' }}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor="#007AFF" // iOS
-            colors={["#007AFF"]} // Android
-          />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
 
@@ -39,6 +58,10 @@ export default function StatsScreen() {
           <Text style={styles.title}>Statistics</Text>
           <View style={styles.selector}></View>
         </View>
+
+        {!isLoading && (
+          <Averages width={Dimensions.get('window').width * 0.8} height={200} records={sessions} />
+        )}
 
         {/* <Skeleton
           containerStyle={styles.grid}

@@ -30,7 +30,7 @@ interface ClockSliderProps {
     startIcon?: React.ReactNode;
 
     endAngle?: SharedValue<number>;
-    endKnobColor?: string;
+    endColor?: string;
     endIcon?: React.ReactNode;
 
     startTargetAngle?: number | null;
@@ -74,7 +74,7 @@ export default function ClockSlider({
     onValueChange,
     onValueSet,
 
-    touchSlop = 10,
+    touchSlop = 30,
     knobRadius = 15,
     targetKnobRadius = 0,
     iconSize = 25,
@@ -84,7 +84,7 @@ export default function ClockSlider({
     startIcon,
 
     endAngle = useSharedValue(Math.PI * 0.5),
-    endKnobColor = "#ee882f",
+    endColor = "#ee882f",
     endIcon,
 
     startTargetAngle = null,
@@ -339,7 +339,7 @@ export default function ClockSlider({
 
                     {/* End Knob */}
                     {mode === 'range' &&
-                        <AnimatedCircle animatedProps={endKnobProps} r={knobRadius} fill={endKnobColor} />
+                        <AnimatedCircle animatedProps={endKnobProps} r={knobRadius} fill={endColor} />
                     }
 
                     {/* Target Arc */}

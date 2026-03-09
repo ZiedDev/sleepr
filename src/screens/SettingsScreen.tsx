@@ -96,7 +96,7 @@ export default function SettingsScreen() {
         <AnimatedTextInput
           underlineColorAndroid="transparent"
           editable={false}
-          value={singleClockStr.value} // Fallback for JS initial render
+          value={'12:00 AM'}
           animatedProps={animatedProps}
           style={{ fontSize: 24, fontWeight: 'bold', color: '#fff' }}
         />
