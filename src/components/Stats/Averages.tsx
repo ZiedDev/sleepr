@@ -20,7 +20,13 @@ export default function Averages({
 
     style,
 }: AveragesProps) {
-    const avgs = StatsLogic.getAverages(records);
+    const avgs = records.length > 0
+        ? StatsLogic.getAverages(records)
+        : {
+            start: { meanSeconds: 0, meanTime: '--:--' },
+            end: { meanSeconds: 0, meanTime: '--:--' },
+            duration: { meanTime: '--:--' },
+        };
 
     const startAngle = useSharedValue(0);
     startAngle.value = withTiming(avgs.start.meanSeconds / 86400 * Math.PI * 2, {

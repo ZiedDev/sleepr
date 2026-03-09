@@ -58,7 +58,8 @@ export default function NavBar({ navState, setNavState, fadeOut = useSharedValue
     };
   });
 
-  const handleGesture = (event:
+  // Gesture
+  const handleGestureRun = (event:
     GestureStateChangeEvent<PanGestureHandlerEventPayload> |
     GestureUpdateEvent<PanGestureHandlerEventPayload>) => {
 
@@ -72,25 +73,32 @@ export default function NavBar({ navState, setNavState, fadeOut = useSharedValue
       mass: 1,
       overshootClamping: false,
     });
-  }
+  };
 
-  const pan = Gesture.Pan()
-    .onBegin(handleGesture)
-    .onUpdate(handleGesture)
-    .onFinalize(event => {
-      selectedIndex.value = Math.min(Math.max(0, Math.round(selectedIndex.value)), (navOptions.length - 1));
-      translationX.value = withSpring(BUTTON_WIDTH * selectedIndex.value, {
-        damping: 20,
-        stiffness: 240,
-        mass: 1,
-        overshootClamping: false,
-      });
-
-      scheduleOnRN(setNavState, navOptions[selectedIndex.value].key);
+  const handleGestureEnd = () => {
+    selectedIndex.value = Math.min(Math.max(0, Math.round(selectedIndex.value)), (navOptions.length - 1));
+    translationX.value = withSpring(BUTTON_WIDTH * selectedIndex.value, {
+      damping: 20,
+      stiffness: 240,
+      mass: 1,
+      overshootClamping: false,
     });
 
+    scheduleOnRN(setNavState, navOptions[selectedIndex.value].key);
+  };
+
+  const pan = Gesture.Pan()
+    .onBegin(handleGestureRun)
+    .onUpdate(handleGestureRun)
+    .onFinalize(handleGestureEnd);
+
+  const tap = Gesture.Tap()
+    .onEnd(handleGestureEnd);
+
+  const gesture = Gesture.Exclusive(pan, tap);
+
   return (
-    <GestureDetector gesture={pan}>
+    <GestureDetector gesture={gesture}>
       <Animated.View style={[styles.gestureContainer, animatedContainerStyle]}>
         <SafeBlurView style={styles.container} intensity={15}>
 
