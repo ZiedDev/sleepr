@@ -14,6 +14,7 @@ import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStorage } from "./src/db/storage";
 import { useSharedValue } from "react-native-reanimated";
+import { useFonts } from 'expo-font';
 
 export default function App() {
   useEffect(() => {
@@ -24,6 +25,12 @@ export default function App() {
     };
     setup();
   }, []);
+
+  const [loaded] = useFonts({
+    'Lora': require('./assets/fonts/Lora/Lora-VariableFont_wght.ttf'),
+  });
+
+  if (!loaded) return null;
 
   return (
     <SafeAreaProvider>

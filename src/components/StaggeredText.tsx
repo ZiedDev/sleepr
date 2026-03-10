@@ -71,6 +71,5 @@ const styles = StyleSheet.create({
     },
     word: {
         fontSize: 20,
-        fontWeight: 'bold',
     },
 });

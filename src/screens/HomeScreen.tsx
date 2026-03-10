@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Dimensions, StyleSheet, View } from 'react-native';
+import { Dimensions, StyleSheet, Text, View } from 'react-native';
 import useLocation from '../hooks/useLocation';
 import { SleepLogic } from '../db/logic';
 import { useStorage } from '../db/storage';
@@ -19,8 +19,10 @@ export default function HomeScreen({ fadeOutNav }: { fadeOutNav: SharedValue<num
   const currentSession = useStorage((state) => state.currentSession);
   const isTracking = !!currentSession;
   const [statusbarHide, setStatusbarHide] = useState(isTracking);
+  const [commentHide, setCommentHide] = useState(isTracking);
 
   const startTracking = () => {
+    setCommentHide(true);
     const location = useLocation.getState().location;
     const lat = location?.coords.latitude ?? null;
     const lon = location?.coords.longitude ?? null;
@@ -31,6 +33,7 @@ export default function HomeScreen({ fadeOutNav }: { fadeOutNav: SharedValue<num
   };
 
   const stopTracking = async () => {
+    setCommentHide(false);
     const location = useLocation.getState().location;
     const lat = location?.coords.latitude ?? null;
     const lon = location?.coords.longitude ?? null;
@@ -56,11 +59,14 @@ export default function HomeScreen({ fadeOutNav }: { fadeOutNav: SharedValue<num
         translucent
       />
 
-      <StaggeredText
-        sentence='Hello World! My name is 67.'
-        style={{ color: 'white' }}
-        containerStyle={{ marginBottom: 100 }}
-      />
+      {commentHide && (
+        <StaggeredText
+          sentence='Hello World! My name is 67.'
+          style={{ color: 'white' }}
+          wordStyles={{ '67.': { color: '#f00', fontFamily: 'Lora' } }}
+          containerStyle={{ marginBottom: 100 }}
+        />
+      )}
 
       <MorphSlider
         isInitialComplete={isTracking}
