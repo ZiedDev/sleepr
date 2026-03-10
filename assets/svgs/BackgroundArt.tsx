@@ -17,6 +17,7 @@ import {
   Blur,
 } from '@shopify/react-native-skia';
 import { Easing, SharedValue, useDerivedValue } from 'react-native-reanimated';
+import useSettings from '../../src/hooks/useSettings';
 
 const ORIGINAL_WIDTH = 1199;
 const ORIGINAL_HEIGHT = 1508.83;
@@ -47,9 +48,16 @@ const BackgroundArt = memo(({ width = 200, colors }: {
     ]
   });
 
-  const blur = useDerivedValue(() => {// TODO: Rasterize for performance
-    return Math.round(30 * Easing.in(Easing.cubic)(Math.floor(colors.value.blur * 20) / 20));
-  });
+  // TODO: Rasterize for performance
+  const blurPerformance = useSettings.getState().blurPerformance;
+  const blurStep = { lowest: 2, low: 10, balanced: 20, quality: NaN }[blurPerformance];
+  const blur = blurPerformance === 'quality' ?
+    useDerivedValue(() => {
+      return Math.round(30 * Easing.in(Easing.cubic)(colors.value.blur));
+    }) :
+    useDerivedValue(() => {
+      return Math.round(30 * Easing.in(Easing.cubic)(Math.floor(colors.value.blur * blurStep) / blurStep));
+    });
 
   const sky = useDerivedValue(() => [colors.value.sky1, colors.value.sky2]);
   const skyPos = useDerivedValue(() => [{ translateX: colors.value.skyPosX }, { translateY: colors.value.skyPosY }]);
