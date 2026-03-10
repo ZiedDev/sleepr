@@ -302,6 +302,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     trackText: {
+        fontFamily: "MonaSans-Regular",
         position: 'relative',
         fontSize: 19,
         fontWeight: '200',

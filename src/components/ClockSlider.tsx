@@ -331,7 +331,7 @@ export default function ClockSlider({
 
                     {/* Arc */}
                     {mode === 'range' &&
-                        <AnimatedPath animatedProps={arcProps} stroke={arcColor} strokeWidth={arcWidth} fill="none" />
+                        <AnimatedPath animatedProps={arcProps} stroke={arcColor} strokeWidth={arcWidth} strokeLinecap="round" fill="none" />
                     }
 
                     {/* Start Knob */}

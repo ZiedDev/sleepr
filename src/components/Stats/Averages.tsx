@@ -41,18 +41,24 @@ export default function Averages({
     });
 
     return (
-        <View style={[{ width, height }, styles.container, style]}>
+        <View style={[{ width, height, borderRadius: width * 0.12 }, styles.container, style]}>
             <View style={styles.textContainer}>
-                <Text>{`${avgs.start.meanTime} -> ${avgs.end.meanTime}`}</Text>
-                <Text>{avgs.duration.meanTime}</Text>
+                <Text style={{fontFamily: "MonaSans-Regular",}}>Averages</Text>
+                <Text style={{fontFamily: "MonaSans-Regular",}}>{`${avgs.start.meanTime} -> ${avgs.end.meanTime}`}</Text>
+                <Text style={{fontFamily: "MonaSans-Regular",}}>{avgs.duration.meanTime}</Text>
             </View>
 
             <ClockSlider
                 mode='range'
                 size={width / 2}
+                knobRadius={0}
+                startColor="#126ded"
+                endColor="#126ded"
+                arcColor="#468df1"
                 locked
                 startAngle={startAngle}
                 endAngle={endAngle}
+
             />
         </View>
     );
@@ -60,6 +66,11 @@ export default function Averages({
 
 const styles = StyleSheet.create({
     container: {
+        borderCurve: "continuous",
+        // backgroundColor: "#126ded",
+        borderColor: "#ffffff99",
+        borderWidth: 2,
+        paddingHorizontal: 10,
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',

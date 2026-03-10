@@ -27,7 +27,23 @@ export default function App() {
   }, []);
 
   const [loaded] = useFonts({
-    'Lora': require('./assets/fonts/Lora/Lora-VariableFont_wght.ttf'),
+    // 'Lora': require('./assets/fonts/Lora/Lora-VariableFont_wght.ttf'),
+    'MonaSans-Black': require('./assets/fonts/Mona Sans/TTF/MonaSans-Black.ttf'),
+    'MonaSans-BlackItalic': require('./assets/fonts/Mona Sans/TTF/MonaSans-BlackItalic.ttf'),
+    'MonaSans-Bold': require('./assets/fonts/Mona Sans/TTF/MonaSans-Bold.ttf'),
+    'MonaSans-BoldItalic': require('./assets/fonts/Mona Sans/TTF/MonaSans-BoldItalic.ttf'),
+    'MonaSans-ExtraBold': require('./assets/fonts/Mona Sans/TTF/MonaSans-ExtraBold.ttf'),
+    'MonaSans-ExtraBoldItalic': require('./assets/fonts/Mona Sans/TTF/MonaSans-ExtraBoldItalic.ttf'),
+    'MonaSans-ExtraLight': require('./assets/fonts/Mona Sans/TTF/MonaSans-ExtraLight.ttf'),
+    'MonaSans-ExtraLightItalic': require('./assets/fonts/Mona Sans/TTF/MonaSans-ExtraLightItalic.ttf'),
+    'MonaSans-Italic': require('./assets/fonts/Mona Sans/TTF/MonaSans-Italic.ttf'),
+    'MonaSans-Light': require('./assets/fonts/Mona Sans/TTF/MonaSans-Light.ttf'),
+    'MonaSans-LightItalic': require('./assets/fonts/Mona Sans/TTF/MonaSans-LightItalic.ttf'),
+    'MonaSans-Medium': require('./assets/fonts/Mona Sans/TTF/MonaSans-Medium.ttf'),
+    'MonaSans-MediumItalic': require('./assets/fonts/Mona Sans/TTF/MonaSans-MediumItalic.ttf'),
+    'MonaSans-Regular': require('./assets/fonts/Mona Sans/TTF/MonaSans-Regular.ttf'),
+    'MonaSans-SemiBold': require('./assets/fonts/Mona Sans/TTF/MonaSans-SemiBold.ttf'),
+    'MonaSans-SemiBoldItalic': require('./assets/fonts/Mona Sans/TTF/MonaSans-SemiBoldItalic.ttf'),
   });
 
   if (!loaded) return null;

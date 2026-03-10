@@ -9,6 +9,8 @@ import { DateTime } from 'luxon';
 import { SleepSessionRecord } from '../db/types';
 import Averages from '../components/Stats/Averages'
 
+const PAGE_WIDTH = Dimensions.get('window').width * 0.9;
+
 export default function StatsScreen() {
   useEffect(() => {
     useColorStore.getState().setBlur(0.8);
@@ -59,50 +61,11 @@ export default function StatsScreen() {
           <View style={styles.selector}></View>
         </View>
 
-        {!isLoading && (
-          <Averages width={Dimensions.get('window').width * 0.8} height={200} records={sessions} />
-        )}
-
-        {/* <Skeleton
-          containerStyle={styles.grid}
-          isLoading={true}
-          boneColor='#2e2e2e'
-          highlightColor='#515151'
-          animationDirection='diagonalTopLeft'
-          layout={[
-            { key: "steps", width: "100%", height: 220, marginBottom: 12,borderRadius:20 }, // cardLarge
-            { key: "calories", width: "48%", height: 96, marginBottom: 12 }, // cardSmall
-            { key: "distance", width: "48%", height: 96, marginBottom: 12 }, // cardSmall
-            { key: "sleep", width: "100%", height: 120, marginBottom: 12 }, // cardWide
-            { key: "heartRate", width: "48%", height: 96, marginBottom: 12 }, // cardMedium
-            { key: "workouts", width: "48%", height: 96, marginBottom: 12 }, // cardMedium
-          ]}
-        >
-          <View style={styles.grid}>
-            <View style={[styles.card, styles.cardLarge]}>
-              <Text style={styles.cardText}>Steps</Text>
-            </View>
-
-            <View style={[styles.card, styles.cardSmall]}>
-              <Text style={styles.cardText}>Calories</Text>
-            </View>
-            <View style={[styles.card, styles.cardSmall]}>
-              <Text style={styles.cardText}>Distance</Text>
-            </View>
-
-            <View style={[styles.card, styles.cardWide]}>
-              <Text style={styles.cardText}>Sleep</Text>
-            </View>
-
-            <View style={[styles.card, styles.cardMedium]}>
-              <Text style={styles.cardText}>Heart Rate</Text>
-            </View>
-            <View style={[styles.card, styles.cardMedium]}>
-              <Text style={styles.cardText}>Workouts</Text>
-            </View>
-          </View>
-        </Skeleton> */}
-
+        <View style={styles.statsWidgetsContainer}>
+          {!isLoading && (
+            <Averages width={PAGE_WIDTH} height={200} records={sessions} />
+          )}
+        </View>
       </ScrollView>
     </View>
   );
@@ -125,6 +88,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
   },
   title: {
+    fontFamily: "MonaSans-Regular",
     fontSize: 28,
     color: '#fff',
     fontWeight: '500',
@@ -137,41 +101,8 @@ const styles = StyleSheet.create({
     borderCurve: "continuous",
   },
 
-  grid: {
-    width: "100%",
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    padding: 16,
-    gap: 12,
-  },
-  card: {
-    backgroundColor: "#2e2e2e",
-    borderRadius: 24,
-    padding: 16,
-    justifyContent: "center",
-    alignItems: 'flex-start',
-  },
-  cardText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "500"
-  },
-
-  cardSmall: {
-    width: "48%",
-    aspectRatio: 1.5,
-  },
-  cardMedium: {
-    width: "48%",
-    aspectRatio: 1,
-  },
-  cardLarge: {
-    width: "100%",
-    aspectRatio: 1.5,
-  },
-  cardWide: {
-    width: "100%",
-    aspectRatio: 3,
+  statsWidgetsContainer: {
+    width: PAGE_WIDTH,
+    paddingTop: 20,
   },
 });

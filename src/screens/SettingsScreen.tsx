@@ -225,6 +225,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#e5e619',
   },
   buttonText: {
+    fontFamily: "MonaSans-Regular",
     color: '#fff',
     fontSize: 18,
     fontWeight: '900',

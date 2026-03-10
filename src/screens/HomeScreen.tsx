@@ -64,7 +64,7 @@ export default function HomeScreen({ fadeOutNav }: { fadeOutNav: SharedValue<num
         <StaggeredText
           sentence='Hello World! My name is 67.'
           style={{ color: 'white' }}
-          wordStyles={{ '67.': { color: '#f00', fontFamily: 'Lora' } }}
+          wordStyles={{ '67.': { color: '#f00', fontFamily: 'Mona Sans' } }}
           containerStyle={{ marginBottom: 100 }}
         />
       )}
