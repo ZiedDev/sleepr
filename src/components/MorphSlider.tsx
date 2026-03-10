@@ -106,7 +106,8 @@ export default function MorphSlider({
             const plugin = allPlugins[i];
             if (plugin.onUpdate) {
                 if (plugin.val) {
-                    plugin.val.value = plugin.onUpdate(progress, delta);
+                    const u=plugin.onUpdate(progress, delta);
+                    if (u!=plugin.val.value) plugin.val.value=u;
                 }
                 else
                     plugin.onUpdate(progress, delta);
@@ -254,7 +255,7 @@ export default function MorphSlider({
                 styles.pill,
                 pillStyle,
                 {
-                    height: thumbSize, borderRadius: thumbSize / 2, backgroundColor: pillColor,
+                    height: thumbSize, borderRadius: thumbSize / 2,
                     top: padding, left: padding,
                 }
             ]} />
