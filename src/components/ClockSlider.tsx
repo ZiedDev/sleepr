@@ -74,7 +74,7 @@ export default function ClockSlider({
     onValueChange,
     onValueSet,
 
-    touchSlop = 30,
+    touchSlop = 20,
     knobRadius = 15,
     targetKnobRadius = 0,
     iconSize = 25,
@@ -155,30 +155,33 @@ export default function ClockSlider({
     // Gesture
     const pan = Gesture.Pan()
         .enabled(!locked)
-        .onStart((event) => {
-            const x = event.x - CENTER;
-            const y = event.y - CENTER;
+        .manualActivation(true)
+        .onTouchesDown((event, stateManager) => {
+            const x = event.allTouches[0].x;
+            const y = event.allTouches[0].y;
 
-            const dist = Math.hypot(x, y);
+            const dist = Math.hypot(x - CENTER, y - CENTER);
 
             if ((dist < RADIUS - trackWidth / 2 - touchSlop / 2) ||
                 (dist > RADIUS + trackWidth / 2 + touchSlop / 2)) return;
 
             const { x: startX, y: startY } = polarToXY(startAngle.value);
-            if (Math.hypot(event.x - startX, event.y - startY) < knobRadius + touchSlop) {
+            if (Math.hypot(x - startX, y - startY) < knobRadius + touchSlop) {
                 activeKnob.value = 'start';
+                stateManager.activate();
                 return;
             }
 
             if (mode === 'single') return;
 
             const { x: endX, y: endY } = polarToXY(endAngle.value);
-            if (Math.hypot(event.x - endX, event.y - endY) < knobRadius + touchSlop) {
+            if (Math.hypot(x - endX, y - endY) < knobRadius + touchSlop) {
                 activeKnob.value = 'end';
+                stateManager.activate();
                 return;
             }
 
-            let angle = Math.atan2(y, x);
+            let angle = Math.atan2(y - CENTER, x - CENTER);
             if (angle < 0) angle += (2 * Math.PI);
 
             if (absoluteAngleDelta(startAngle.value, angle) <
@@ -186,6 +189,7 @@ export default function ClockSlider({
                 activeKnob.value = 'middle';
                 const quantizedAngle = Math.round(angle / step) * step;
                 midAngle.value = quantizedAngle;
+                stateManager.activate();
                 return;
             }
         })
