@@ -12,14 +12,15 @@ import * as Haptics from 'expo-haptics';
 import StaggeredText from '../components/StaggeredText';
 
 export default function HomeScreen({ fadeOutNav }: { fadeOutNav: SharedValue<number> }) {
-  useEffect(() => {
-    useColorStore.getState().setBlur(0);
-  }, []);
-
+  
   const currentSession = useStorage((state) => state.currentSession);
   const isTracking = !!currentSession;
   const [statusbarHide, setStatusbarHide] = useState(isTracking);
   const [commentHide, setCommentHide] = useState(isTracking);
+  
+  useEffect(() => {
+    useColorStore.getState().setBlur(Number(isTracking));
+  }, []);
 
   const startTracking = () => {
     setCommentHide(true);
@@ -87,7 +88,8 @@ export default function HomeScreen({ fadeOutNav }: { fadeOutNav: SharedValue<num
             onEnd: (e) => {
               'worklet';
               if (e) return withDelay(500, withSpring(Number(!e), { damping: 15, stiffness: 200, mass: 1 }))
-              else return withTiming(Number(!e), { duration: 1000, easing: Easing.out(Easing.cubic) })
+              // else return withTiming(Number(!e), { duration: 1000, easing: Easing.out(Easing.cubic) })
+              else return withSpring(Number(!e), { damping: 15, stiffness: 100, mass: 1 })
             },
           }, {
             val: null,
