@@ -62,6 +62,7 @@ interface ClockSliderProps {
     quantize?: boolean;
     forwardDifference?: number;
     backwardDifference?: number;
+    phaseAngle?: number;
 
     style?: StyleProp<ViewStyle>;
 }
@@ -113,6 +114,7 @@ export default function ClockSlider({
     quantize = true,
     forwardDifference = 2,
     backwardDifference = 4,
+    phaseAngle = Math.PI / 2,
 
     style,
 }: ClockSliderProps) {
@@ -213,12 +215,12 @@ export default function ClockSlider({
 
                 if (normalizedAngle !== startAngle.value) {
                     if (mode === 'range') {
-                        const diff = signedAngleDelta(normalizedAngle, endAngle.value);
+                        const arcLength = Math.min(Math.max(
+                            absoluteAngleDelta(normalizedAngle, endAngle.value)
+                            , MIN_DIFF_FORWARD)
+                            , 2 * Math.PI - MIN_DIFF_BACKWARD);
 
-                        if (diff > 0 && diff < MIN_DIFF_FORWARD)
-                            endAngle.value = (normalizedAngle + MIN_DIFF_FORWARD) % (2 * Math.PI);
-                        else if (diff <= 0 && -diff < MIN_DIFF_BACKWARD)
-                            endAngle.value = (normalizedAngle - MIN_DIFF_BACKWARD) % (2 * Math.PI);
+                        endAngle.value = (normalizedAngle + arcLength) % (2 * Math.PI);
                     }
 
                     startAngle.value = normalizedAngle;
@@ -234,11 +236,12 @@ export default function ClockSlider({
                 const normalizedAngle = (quantizedAngle + 2 * Math.PI) % (2 * Math.PI);
 
                 if (normalizedAngle !== endAngle.value) {
-                    const diff = signedAngleDelta(normalizedAngle, startAngle.value);
-                    if (diff > 0 && diff < MIN_DIFF_BACKWARD)
-                        startAngle.value = (normalizedAngle + MIN_DIFF_BACKWARD) % (2 * Math.PI);
-                    else if (diff <= 0 && -diff < MIN_DIFF_FORWARD)
-                        startAngle.value = (normalizedAngle - MIN_DIFF_FORWARD) % (2 * Math.PI);
+                    const arcLength = Math.min(Math.max(
+                        absoluteAngleDelta(startAngle.value, normalizedAngle)
+                        , MIN_DIFF_FORWARD)
+                        , 2 * Math.PI - MIN_DIFF_BACKWARD);
+
+                    startAngle.value = (normalizedAngle - arcLength + 2 * Math.PI) % (2 * Math.PI);
 
                     endAngle.value = normalizedAngle;
                     handleUpdate(startAngle.value, endAngle.value);
