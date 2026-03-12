@@ -5,12 +5,29 @@ import useLocation from '../hooks/useLocation';
 import useColorStore from '../hooks/useColors';
 import Skeleton from "react-native-reanimated-skeleton";
 import { SleepLogic, StatsLogic } from '../db/logic';
-import { DateTime } from 'luxon';
+import { DateTime, Interval } from 'luxon';
 import { SleepSessionRecord } from '../db/types';
 import Averages from '../components/Stats/Averages'
 import Graph from '../components/Stats/Graph';
+import { useSharedValue } from 'react-native-reanimated';
 
 const PAGE_WIDTH = Dimensions.get('window').width * 0.9;
+const POLL_SIZE = 3;
+const LOADING_TIMEOUT = 300;
+
+const expandInterval = (interval: Interval, n: number) => {
+  if (!interval?.isValid || !interval.start || !interval.end) {
+    throw new Error("Invalid Luxon interval");
+  }
+
+  const durationMs = interval.toDuration().as("milliseconds");
+  const shift = durationMs * n;
+
+  return Interval.fromDateTimes(
+    interval.start.minus({ milliseconds: shift }),
+    interval.end.plus({ milliseconds: shift })
+  );
+}
 
 export default function StatsScreen() {
   useEffect(() => {
@@ -30,22 +47,44 @@ export default function StatsScreen() {
 
   // Stats
   const [isLoading, setLoading] = useState(true);
-  const now = DateTime.now();
-  const [range, setRange] = useState({
-    rangeStart: now.minus({ year: 1 }),
-    rangeEnd: now,
-  });
-  const [sessions, setSessions] = useState<SleepSessionRecord[]>([]);
+  const [currentRange, setCurrentRange] = useState(Interval.fromDateTimes(
+    DateTime.now(),
+    DateTime.now().minus({ week: 1 })
+  ));
+  const [fetchedRange, setFetchedRange] = useState(expandInterval(currentRange, POLL_SIZE));
+  const fetchedSessions = useSharedValue<SleepSessionRecord[]>([]);
+  const currentSessions = useSharedValue<SleepSessionRecord[]>([]);
 
   useEffect(() => {
     const getStats = async () => {
-      setLoading(true);
-      const sessions = await SleepLogic.list(range);
-      setSessions(sessions);
-      setLoading(false);
+      const intersection = fetchedRange.intersection(currentRange);
+      const isContained = (intersection !== null) && intersection.equals(currentRange);
+
+      if (!isContained) {
+        let loadingShown = false;
+        const timer = setTimeout(() => {
+          setLoading(true);
+          loadingShown = true;
+        }, LOADING_TIMEOUT);
+
+        const newRange = expandInterval(currentRange, POLL_SIZE);
+
+        try {
+          const newSessions = await SleepLogic.list({
+            rangeStart: newRange.start!,
+            rangeEnd: newRange.end!,
+          });
+          fetchedSessions.value = newSessions;
+          // TODO: update currentSessions.value
+          setFetchedRange(newRange);
+        } finally {
+          clearTimeout(timer);
+          if (loadingShown) setLoading(false);
+        }
+      }
     }
     getStats();
-  }, [range]);
+  }, [currentRange]);
 
   return (
     <View style={styles.container}>
@@ -64,15 +103,15 @@ export default function StatsScreen() {
         </View>
 
         <View style={styles.statsWidgetsContainer}>
-          {!isLoading && (
+          {/* {!isLoading && (
             <Graph width={PAGE_WIDTH} height={200} records={sessions} />
-          )}
+          )} */}
         </View>
 
         <View style={styles.statsWidgetsContainer}>
-          {!isLoading && (
+          {/* {!isLoading && (
             <Averages width={PAGE_WIDTH} height={200} records={sessions} />
-          )}
+          )} */}
         </View>
       </ScrollView>
     </View>
