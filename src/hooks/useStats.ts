@@ -6,7 +6,7 @@ import { SleepSessionRecord } from '../db/types';
 
 const LOADING_TIMEOUT = 300;
 const POLL_SIZE = 2;
-const PREFETCH_BUFFER_MS = 100;
+const PREFETCH_BUFFER_MS = 86400000; // 24*60*60*1000 (ms in a day)
 
 const expandInterval = (interval: Interval, n: number) => {
     if (!interval?.isValid || !interval.start || !interval.end) {
@@ -29,6 +29,7 @@ const useStats = (initialRange?: Interval) => {
         now
     );
 
+    let initial = true;
     const [isLoading, setLoading] = useState(false);
     const [currentRange, setCurrentRange] = useState(defaultRange);
     const [fetchedRange, setFetchedRange] = useState(expandInterval(defaultRange, POLL_SIZE));
@@ -43,22 +44,36 @@ const useStats = (initialRange?: Interval) => {
             const startNearEdge = currentRange.start! <= fetchedRange.start!.plus({ milliseconds: PREFETCH_BUFFER_MS });
             const endNearEdge = currentRange.end! >= fetchedRange.end!.minus({ milliseconds: PREFETCH_BUFFER_MS });
 
-            if (startNearEdge || endNearEdge) {
+            let sessions = fetchedSessions.value;
+
+            if (startNearEdge || endNearEdge || initial) {
+                initial = false;
+
                 let loadingShown = false;
                 const timer = setTimeout(() => {
                     setLoading(true);
                     loadingShown = true;
                 }, LOADING_TIMEOUT);
 
-                const newRange = expandInterval(fetchedRange, POLL_SIZE);
+                const newRange = expandInterval(currentRange, POLL_SIZE);
 
                 try {
+                    // TODO: fetch chunk not all
                     const newSessions = await SleepLogic.list({
                         rangeStart: newRange.start!,
                         rangeEnd: newRange.end!,
-                        
                     });
-                    fetchedSessions.value = [...fetchedSessions.value, ...newSessions];
+
+                    console.log(`Fetch
+                        range:
+                        ${newRange.start?.toLocal()} -> ${newRange.end?.toLocal()}
+                        
+                        seshs:
+                        ${JSON.stringify(newSessions.map(x => fromEpochSec(x.end).toLocal()), null, 2)}
+                    `);
+
+                    fetchedSessions.value = newSessions;
+                    sessions = newSessions;
                     setFetchedRange(newRange);
                 } finally {
                     clearTimeout(timer);
@@ -66,11 +81,20 @@ const useStats = (initialRange?: Interval) => {
                 }
             };
 
-            currentSessions.value = fetchedSessions.value.filter(s => {
-                const start = fromEpochSec(s.start);
-                const end = fromEpochSec(s.end);
-                return start >= currentRange.start! && end <= currentRange.end!;
+            // TODO:  match?: "overlapping" | "contained" 
+            currentSessions.value = sessions.filter(s => {
+                const sessionEnd = fromEpochSec(s.end);
+                const sessionStart = fromEpochSec(s.start);
+                return sessionEnd >= currentRange.start! && sessionStart <= currentRange.end!;
             });
+
+            console.log(`Current
+                    range:
+                    ${currentRange.start?.toLocal()} -> ${currentRange.end?.toLocal()}
+
+                    sheshs:
+                    ${JSON.stringify(currentSessions.value.map(x => fromEpochSec(x.end).toLocal()), null, 2)}
+                    `);
         }
         fetchStats();
     }, [currentRange]);

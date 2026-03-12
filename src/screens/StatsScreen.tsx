@@ -34,6 +34,29 @@ export default function StatsScreen() {
     Interval.fromDateTimes(DateTime.now().minus({ day: 1 }), DateTime.now())
   );
 
+  const [all,setAll] = useState<SleepSessionRecord[]>([]);
+
+  useEffect(() => {
+    const setup = async () => {
+      const sessions = await SleepLogic.list({
+        rangeStart: DateTime.now().minus({ year: 1 }),
+        rangeEnd: DateTime.now(),
+      });
+      setAll(sessions);
+      // console.log(`
+      //   All:
+      //   ${JSON.stringify(sessions.map(x => fromEpochSec(x.end).toLocal()), null, 2)}
+
+      //   Current:
+      //   ${JSON.stringify(currentSessions.value.map(x => fromEpochSec(x.end).toLocal()), null, 2)}
+
+      //   Fetched:
+      //   ${JSON.stringify(fetchedSessions.value.map(x => fromEpochSec(x.end).toLocal()), null, 2)}
+      //   `);
+    }
+    setup()
+  }, [])
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -54,13 +77,18 @@ export default function StatsScreen() {
           style={{ marginTop: 20, padding: 40, borderRadius: 20, backgroundColor: '#19d1e6' }}
           onPress={() => {
             setCurrentRange(
-              Interval.fromDateTimes(currentRange.start!.minus({ day: 1 }), currentRange.end!)
+              Interval.fromDateTimes(currentRange.start!.minus({ day: 1 }), currentRange.end!.minus({ day: 1 }))
             )
-            console.log(`
-              ${currentRange.start?.toLocal()} -> ${currentRange.end?.toLocal()}
-              ${currentSessions.value.map(x => fromEpochSec(x.end).toLocal())}
-              ${fetchedSessions.value.map(x => fromEpochSec(x.end).toLocal())}
-              `)
+            // console.log(`
+            //   Range;
+            //   ${currentRange.start?.toLocal()} -> ${currentRange.end?.toLocal()}
+
+            //   Current:
+            //   ${JSON.stringify(currentSessions.value.map(x => fromEpochSec(x.end).toLocal()), null, 2)}
+
+            //   Fetched:
+            //   ${JSON.stringify(fetchedSessions.value.map(x => fromEpochSec(x.end).toLocal()), null, 2)}
+            //   `)
           }}
         />
 
@@ -71,9 +99,9 @@ export default function StatsScreen() {
         </View>
 
         <View style={styles.statsWidgetsContainer}>
-          {/* {!isLoading && (
-            <Averages width={PAGE_WIDTH} height={200} records={sessions} />
-          )} */}
+          {!isLoading && (
+            <Averages width={PAGE_WIDTH} height={200} records={all} />
+          )}
         </View>
       </ScrollView>
     </View>
