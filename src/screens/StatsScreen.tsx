@@ -8,6 +8,7 @@ import { SleepLogic, StatsLogic } from '../db/logic';
 import { DateTime } from 'luxon';
 import { SleepSessionRecord } from '../db/types';
 import Averages from '../components/Stats/Averages'
+import Graph from '../components/Stats/Graph';
 
 const PAGE_WIDTH = Dimensions.get('window').width * 0.9;
 
@@ -56,9 +57,16 @@ export default function StatsScreen() {
         }
       >
 
+        {/* TODO:  Pull header out of ScrollView */}
         <View style={styles.header}>
           <Text style={styles.title}>Statistics</Text>
           <View style={styles.selector}></View>
+        </View>
+
+        <View style={styles.statsWidgetsContainer}>
+          {!isLoading && (
+            <Graph width={PAGE_WIDTH} height={200} records={sessions} />
+          )}
         </View>
 
         <View style={styles.statsWidgetsContainer}>
