@@ -12,12 +12,12 @@ import Graph from '../components/Stats/Graph';
 import { useSharedValue } from 'react-native-reanimated';
 
 const PAGE_WIDTH = Dimensions.get('window').width * 0.9;
-const POLL_SIZE = 3;
+const POLL_SIZE = 2;
 const LOADING_TIMEOUT = 300;
 
 const expandInterval = (interval: Interval, n: number) => {
   if (!interval?.isValid || !interval.start || !interval.end) {
-    throw new Error("Invalid Luxon interval");
+    throw new Error(`[StatsScreen] Invalid Luxon interval: ${interval?.invalidExplanation}`);
   }
 
   const durationMs = interval.toDuration().as("milliseconds");
@@ -48,8 +48,8 @@ export default function StatsScreen() {
   // Stats
   const [isLoading, setLoading] = useState(true);
   const [currentRange, setCurrentRange] = useState(Interval.fromDateTimes(
-    DateTime.now(),
-    DateTime.now().minus({ week: 1 })
+    DateTime.now().minus({ week: 1 }),
+    DateTime.now()
   ));
   const [fetchedRange, setFetchedRange] = useState(expandInterval(currentRange, POLL_SIZE));
   const fetchedSessions = useSharedValue<SleepSessionRecord[]>([]);
@@ -57,10 +57,11 @@ export default function StatsScreen() {
 
   useEffect(() => {
     const getStats = async () => {
-      const intersection = fetchedRange.intersection(currentRange);
-      const isContained = (intersection !== null) && intersection.equals(currentRange);
+      if (!fetchedRange || !currentRange) return;
+      const startNearEdge = currentRange.start! <= fetchedRange.start!.plus({ milliseconds: 100 });
+      const endNearEdge = currentRange.end! >= fetchedRange.end!.minus({ milliseconds: 100 });
 
-      if (!isContained) {
+      if (startNearEdge || endNearEdge) {
         let loadingShown = false;
         const timer = setTimeout(() => {
           setLoading(true);
@@ -75,6 +76,7 @@ export default function StatsScreen() {
             rangeEnd: newRange.end!,
           });
           fetchedSessions.value = newSessions;
+          // newRange.divideEqually()
           // TODO: update currentSessions.value
           setFetchedRange(newRange);
         } finally {
