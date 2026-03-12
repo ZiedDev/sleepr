@@ -1,9 +1,9 @@
-import React, { useMemo } from 'react';
+import React, { memo, useMemo } from 'react';
 import { StyleProp, StyleSheet, View, ViewStyle, Text } from 'react-native';
-import Animated, { SharedValue, useSharedValue, withTiming, Easing, useDerivedValue } from 'react-native-reanimated';
+import Animated, { SharedValue, useSharedValue, withTiming, Easing, useDerivedValue, useAnimatedProps } from 'react-native-reanimated';
 import { StatsLogic } from '../../db/logic';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { GraphResults, SleepSessionRecord } from '../../db/types';
+import { GraphDataPoint, GraphResults, SleepSessionRecord } from '../../db/types';
 import * as Haptics from 'expo-haptics';
 import { Canvas, RoundedRect } from '@shopify/react-native-skia';
 
@@ -56,43 +56,55 @@ export default function Graph({
 
     const gesture = Gesture.Simultaneous(pan, pinch);
 
-    const bars = useDerivedValue(() => {
-        return dataArray.map(([date, point], index) => {
-            const x = (index * (BAR_WIDTH + GAP)) * scaleX.value + translateX.value;
-            if (x < -BAR_WIDTH || x > width) return null;
-            return {
-                key: date,
-                x,
-                y: height - point.height - 40,
-                width: BAR_WIDTH * scaleX.value,
-                height: point.height,
-            };
-        });
-    }, [dataArray, width, height]);
-
     return (
         <GestureDetector gesture={gesture}>
             <View style={[styles.container, { width, height, borderRadius: width * 0.12 }, style]}>
                 <Canvas style={{ flex: 1 }}>
-                    {bars.value.map((bar) => {
-                        if (!bar) return null;
-                        return (
-                            <RoundedRect
-                                key={bar.key}
-                                x={bar.x}
-                                y={bar.y}
-                                width={bar.width}
-                                height={bar.height}
-                                r={8}
-                                color="white"
-                            />
-                        );
-                    })}
+                    {dataArray.map(([date, point], index) => (
+                        <Bar
+                            key={date}
+                            index={index}
+                            point={point}
+                            width={width}
+                            height={height}
+                            translateX={translateX}
+                            scaleX={scaleX}
+                        />
+                    ))}
                 </Canvas>
             </View>
         </GestureDetector>
     );
 };
+
+const Bar = memo(({ index, point, width, height, translateX, scaleX, }: any) => {
+    const x = useDerivedValue(() => {
+        return (index * (BAR_WIDTH + GAP)) * scaleX.value + translateX.value;
+    });
+
+    const y = useDerivedValue(() => {
+        return height - point.height - 40;
+    });
+
+    const rectWidth = useDerivedValue(() => {
+        return BAR_WIDTH * scaleX.value;
+    });
+
+    const rectHeight = useDerivedValue(() => {
+        return point.height;
+    });
+
+    return (
+        <RoundedRect
+            x={x}
+            y={y}
+            width={rectWidth}
+            height={rectHeight}
+            r={8}
+            color="white"
+        />
+    );
+});
 
 const styles = StyleSheet.create({
     container: {
