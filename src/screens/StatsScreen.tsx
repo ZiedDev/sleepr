@@ -1,33 +1,18 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, Dimensions, TouchableOpacity } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import useLocation from '../hooks/useLocation';
 import useColorStore from '../hooks/useColors';
 import Skeleton from "react-native-reanimated-skeleton";
-import { SleepLogic, StatsLogic } from '../db/logic';
+import { fromEpochSec, SleepLogic, StatsLogic } from '../db/logic';
 import { DateTime, Interval } from 'luxon';
 import { SleepSessionRecord } from '../db/types';
 import Averages from '../components/Stats/Averages'
 import Graph from '../components/Stats/Graph';
 import { useSharedValue } from 'react-native-reanimated';
+import useStats from '../hooks/useStats';
 
 const PAGE_WIDTH = Dimensions.get('window').width * 0.9;
-const POLL_SIZE = 2;
-const LOADING_TIMEOUT = 300;
-
-const expandInterval = (interval: Interval, n: number) => {
-  if (!interval?.isValid || !interval.start || !interval.end) {
-    throw new Error(`[StatsScreen] Invalid Luxon interval: ${interval?.invalidExplanation}`);
-  }
-
-  const durationMs = interval.toDuration().as("milliseconds");
-  const shift = durationMs * n;
-
-  return Interval.fromDateTimes(
-    interval.start.minus({ milliseconds: shift }),
-    interval.end.plus({ milliseconds: shift })
-  );
-}
 
 export default function StatsScreen() {
   useEffect(() => {
@@ -45,48 +30,9 @@ export default function StatsScreen() {
     setRefreshing(false);
   }, []);
 
-  // Stats
-  const [isLoading, setLoading] = useState(true);
-  const [currentRange, setCurrentRange] = useState(Interval.fromDateTimes(
-    DateTime.now().minus({ week: 1 }),
-    DateTime.now()
-  ));
-  const [fetchedRange, setFetchedRange] = useState(expandInterval(currentRange, POLL_SIZE));
-  const fetchedSessions = useSharedValue<SleepSessionRecord[]>([]);
-  const currentSessions = useSharedValue<SleepSessionRecord[]>([]);
-
-  useEffect(() => {
-    const getStats = async () => {
-      if (!fetchedRange || !currentRange) return;
-      const startNearEdge = currentRange.start! <= fetchedRange.start!.plus({ milliseconds: 100 });
-      const endNearEdge = currentRange.end! >= fetchedRange.end!.minus({ milliseconds: 100 });
-
-      if (startNearEdge || endNearEdge) {
-        let loadingShown = false;
-        const timer = setTimeout(() => {
-          setLoading(true);
-          loadingShown = true;
-        }, LOADING_TIMEOUT);
-
-        const newRange = expandInterval(currentRange, POLL_SIZE);
-
-        try {
-          const newSessions = await SleepLogic.list({
-            rangeStart: newRange.start!,
-            rangeEnd: newRange.end!,
-          });
-          fetchedSessions.value = newSessions;
-          // newRange.divideEqually()
-          // TODO: update currentSessions.value
-          setFetchedRange(newRange);
-        } finally {
-          clearTimeout(timer);
-          if (loadingShown) setLoading(false);
-        }
-      }
-    }
-    getStats();
-  }, [currentRange]);
+  const { isLoading, currentSessions, fetchedSessions, currentRange, setCurrentRange } = useStats(
+    Interval.fromDateTimes(DateTime.now().minus({ day: 1 }), DateTime.now())
+  );
 
   return (
     <View style={styles.container}>
@@ -103,6 +49,20 @@ export default function StatsScreen() {
           <Text style={styles.title}>Statistics</Text>
           <View style={styles.selector}></View>
         </View>
+
+        <TouchableOpacity
+          style={{ marginTop: 20, padding: 40, borderRadius: 20, backgroundColor: '#19d1e6' }}
+          onPress={() => {
+            setCurrentRange(
+              Interval.fromDateTimes(currentRange.start!.minus({ day: 1 }), currentRange.end!)
+            )
+            console.log(`
+              ${currentRange.start?.toLocal()} -> ${currentRange.end?.toLocal()}
+              ${currentSessions.value.map(x => fromEpochSec(x.end).toLocal())}
+              ${fetchedSessions.value.map(x => fromEpochSec(x.end).toLocal())}
+              `)
+          }}
+        />
 
         <View style={styles.statsWidgetsContainer}>
           {/* {!isLoading && (
