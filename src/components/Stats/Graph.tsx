@@ -1,16 +1,21 @@
-import React, { useMemo } from 'react';
+import React, { memo, useMemo } from 'react';
 import { StyleProp, StyleSheet, View, ViewStyle, Text } from 'react-native';
-import Animated, { SharedValue, useSharedValue, withTiming, Easing, useDerivedValue } from 'react-native-reanimated';
+import Animated, { SharedValue, useSharedValue, withTiming, Easing, useDerivedValue, useAnimatedProps } from 'react-native-reanimated';
 import { StatsLogic } from '../../db/logic';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { GraphResults, SleepSessionRecord } from '../../db/types';
+import { GraphDataPoint, GraphResults, SleepSessionRecord } from '../../db/types';
 import * as Haptics from 'expo-haptics';
-import { Canvas, RoundedRect } from '@shopify/react-native-skia';
+import { Canvas, Group, RoundedRect } from '@shopify/react-native-skia';
+import { Interval } from 'luxon';
 
 interface GraphProps {
     width: number;
     height: number;
-    records: SleepSessionRecord[];
+
+    fetchedSessions: SleepSessionRecord[];
+    fetchedRange: Interval;
+    currentRange: Interval;
+    setCurrentRange: React.Dispatch<React.SetStateAction<Interval>>;
 
     style?: StyleProp<ViewStyle>;
 }
@@ -21,20 +26,25 @@ const GAP = 20;
 export default function Graph({
     width,
     height,
-    records,
+
+    fetchedSessions,
+    fetchedRange,
+    currentRange,
+    setCurrentRange,
 
     style,
 }: GraphProps) {
     const graphData: GraphResults = useMemo(() =>
-        records.length > 0 ? StatsLogic.getGraph(records) : {},
-        [records]);
+        fetchedSessions.length > 0 ? StatsLogic.getGraph(fetchedSessions, 100) : {},
+        [fetchedSessions]);
     const dataArray = Object.entries(graphData);
-    console.log(JSON.stringify(dataArray, null, 2));
+    // console.log(JSON.stringify(dataArray, null, 2));
+
+    
 
     // Interaction States
-    const translateX = useSharedValue(100);
-    const scaleX = useSharedValue(1);
-    const savedScaleX = useSharedValue(1);
+    const initalOffset = currentRange.start!.diff(fetchedRange.start!, 'seconds').seconds / fetchedRange.start!.diff(fetchedRange.end!, 'seconds').seconds * width
+    const translateX = useSharedValue<number>(initalOffset);
     const savedTranslateX = useSharedValue(0);
 
     // Gesture
@@ -56,43 +66,53 @@ export default function Graph({
 
     const gesture = Gesture.Simultaneous(pan, pinch);
 
-    const bars = useDerivedValue(() => {
-        return dataArray.map(([date, point], index) => {
-            const x = (index * (BAR_WIDTH + GAP)) * scaleX.value + translateX.value;
-            if (x < -BAR_WIDTH || x > width) return null;
-            return {
-                key: date,
-                x,
-                y: height - point.height - 40,
-                width: BAR_WIDTH * scaleX.value,
-                height: point.height,
-            };
-        });
-    }, [dataArray, width, height]);
+    const groupTranslation = useDerivedValue(() => [{ translateX: translateX.value }]);
 
     return (
         <GestureDetector gesture={gesture}>
             <View style={[styles.container, { width, height, borderRadius: width * 0.12 }, style]}>
                 <Canvas style={{ flex: 1 }}>
-                    {bars.value.map((bar) => {
-                        if (!bar) return null;
-                        return (
-                            <RoundedRect
-                                key={bar.key}
-                                x={bar.x}
-                                y={bar.y}
-                                width={bar.width}
-                                height={bar.height}
-                                r={8}
-                                color="white"
+                    <Group transform={groupTranslation}>
+                        {dataArray.map(([date, point], index) => (
+                            <Bar
+                                key={date}
+                                index={index}
+                                point={point}
+                                width={width}
+                                height={height}
                             />
-                        );
-                    })}
+                        ))}
+                    </Group>
                 </Canvas>
             </View>
         </GestureDetector>
     );
 };
+
+const Bar = memo(({ index, point, width, height, translateX }: any) => {
+    const x = useDerivedValue(() => {
+        return (index * (BAR_WIDTH + GAP));
+    });
+
+    const y = useDerivedValue(() => {
+        return height - point.height - 20;
+    });
+
+    const rectHeight = useDerivedValue(() => {
+        return point.height;
+    });
+
+    return (
+        <RoundedRect
+            x={x}
+            y={y}
+            width={BAR_WIDTH}
+            height={rectHeight}
+            r={8}
+            color="white"
+        />
+    );
+});
 
 const styles = StyleSheet.create({
     container: {

@@ -1,14 +1,16 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, Dimensions, TouchableOpacity } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import useLocation from '../hooks/useLocation';
 import useColorStore from '../hooks/useColors';
 import Skeleton from "react-native-reanimated-skeleton";
-import { SleepLogic, StatsLogic } from '../db/logic';
-import { DateTime } from 'luxon';
+import { fromEpochSec, SleepLogic, StatsLogic } from '../db/logic';
+import { DateTime, Interval } from 'luxon';
 import { SleepSessionRecord } from '../db/types';
 import Averages from '../components/Stats/Averages'
 import Graph from '../components/Stats/Graph';
+import { useSharedValue } from 'react-native-reanimated';
+import useStats from '../hooks/useStats';
 
 const PAGE_WIDTH = Dimensions.get('window').width * 0.9;
 
@@ -28,24 +30,30 @@ export default function StatsScreen() {
     setRefreshing(false);
   }, []);
 
-  // Stats
-  const [isLoading, setLoading] = useState(true);
-  const now = DateTime.now();
-  const [range, setRange] = useState({
-    rangeStart: now.minus({ year: 1 }),
-    rangeEnd: now,
-  });
-  const [sessions, setSessions] = useState<SleepSessionRecord[]>([]);
+  const { isLoading, currentSessions, fetchedSessions, fetchedRange, currentRange, setCurrentRange } = useStats();
+
+  const [all, setAll] = useState<SleepSessionRecord[]>([]);
 
   useEffect(() => {
-    const getStats = async () => {
-      setLoading(true);
-      const sessions = await SleepLogic.list(range);
-      setSessions(sessions);
-      setLoading(false);
+    const setup = async () => {
+      const sessions = await SleepLogic.list({
+        rangeStart: DateTime.now().minus({ year: 1 }),
+        rangeEnd: DateTime.now(),
+      });
+      setAll(sessions);
+      // console.log(`
+      //   All:
+      //   ${JSON.stringify(sessions.map(x => fromEpochSec(x.end).toLocal()), null, 2)}
+
+      //   Current:
+      //   ${JSON.stringify(currentSessions.value.map(x => fromEpochSec(x.end).toLocal()), null, 2)}
+
+      //   Fetched:
+      //   ${JSON.stringify(fetchedSessions.value.map(x => fromEpochSec(x.end).toLocal()), null, 2)}
+      //   `);
     }
-    getStats();
-  }, [range]);
+    setup()
+  }, [])
 
   return (
     <View style={styles.container}>
@@ -63,15 +71,39 @@ export default function StatsScreen() {
           <View style={styles.selector}></View>
         </View>
 
+        <TouchableOpacity
+          style={{ marginTop: 20, padding: 40, borderRadius: 20, backgroundColor: '#19d1e6' }}
+          onPress={() => {
+            setCurrentRange(
+              Interval.fromDateTimes(currentRange.start!.minus({ week: 1 }), currentRange.end!.minus({ week: 1 }))
+            )
+            // console.log(`
+            //   Range;
+            //   ${currentRange.start?.toLocal()} -> ${currentRange.end?.toLocal()}
+
+            //   Current:
+            //   ${JSON.stringify(currentSessions.value.map(x => fromEpochSec(x.end).toLocal()), null, 2)}
+
+            //   Fetched:
+            //   ${JSON.stringify(fetchedSessions.value.map(x => fromEpochSec(x.end).toLocal()), null, 2)}
+            //   `)
+          }}
+        />
+
         <View style={styles.statsWidgetsContainer}>
           {!isLoading && (
-            <Graph width={PAGE_WIDTH} height={200} records={sessions} />
+            <Graph width={PAGE_WIDTH} height={200}
+              fetchedSessions={fetchedSessions}
+              fetchedRange={fetchedRange}
+              currentRange={currentRange}
+              setCurrentRange={setCurrentRange}
+            />
           )}
         </View>
 
         <View style={styles.statsWidgetsContainer}>
           {!isLoading && (
-            <Averages width={PAGE_WIDTH} height={200} records={sessions} />
+            <Averages width={PAGE_WIDTH} height={200} records={all} />
           )}
         </View>
       </ScrollView>

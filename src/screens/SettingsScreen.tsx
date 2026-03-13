@@ -148,7 +148,7 @@ export default function SettingsScreen() {
 
         <TouchableOpacity
           style={[styles.button, styles.infoButton, { marginTop: 20 }]}
-          onPress={() => { DataLogic.importFromFile({ clearExisting: false }); Haptics.selectionAsync(); }}
+          onPress={() => { DataLogic.importFromFile({ clearExisting: true }); Haptics.selectionAsync(); }}
         >
           <Text style={styles.buttonText}>IMPORT</Text>
         </TouchableOpacity>
