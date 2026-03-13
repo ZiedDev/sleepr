@@ -6,11 +6,15 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { GraphDataPoint, GraphResults, SleepSessionRecord } from '../../db/types';
 import * as Haptics from 'expo-haptics';
 import { Canvas, RoundedRect } from '@shopify/react-native-skia';
+import { Interval } from 'luxon';
 
 interface GraphProps {
     width: number;
     height: number;
-    records: SleepSessionRecord[];
+
+    fetchedSessions: SharedValue<SleepSessionRecord[]>;
+    currentRange: Interval;
+    setCurrentRange: React.Dispatch<React.SetStateAction<Interval>>;
 
     style?: StyleProp<ViewStyle>;
 }
@@ -21,7 +25,10 @@ const GAP = 20;
 export default function Graph({
     width,
     height,
-    records,
+
+    fetchedSessions,
+    currentRange,
+    setCurrentRange,
 
     style,
 }: GraphProps) {

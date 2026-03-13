@@ -29,7 +29,6 @@ const useStats = (initialRange?: Interval) => {
         now
     );
 
-    let initial = true;
     const [isLoading, setLoading] = useState(false);
     const [currentRange, setCurrentRange] = useState(defaultRange);
     const [fetchedRange, setFetchedRange] = useState(expandInterval(defaultRange, POLL_SIZE));
@@ -39,16 +38,12 @@ const useStats = (initialRange?: Interval) => {
 
     useEffect(() => {
         const fetchStats = async () => {
-            if (!fetchedRange || !currentRange) return;
-
             const startNearEdge = currentRange.start! <= fetchedRange.start!.plus({ milliseconds: PREFETCH_BUFFER_MS });
             const endNearEdge = currentRange.end! >= fetchedRange.end!.minus({ milliseconds: PREFETCH_BUFFER_MS });
 
             let sessions = fetchedSessions.value;
 
-            if (startNearEdge || endNearEdge || initial) {
-                initial = false;
-
+            if (startNearEdge || endNearEdge || fetchedSessions.value.length === 0) {
                 let loadingShown = false;
                 const timer = setTimeout(() => {
                     setLoading(true);
@@ -82,18 +77,20 @@ const useStats = (initialRange?: Interval) => {
             };
 
             // TODO:  match?: "overlapping" | "contained" 
-            currentSessions.value = sessions.filter(s => {
+            const currSessions = sessions.filter(s => {
                 const sessionEnd = fromEpochSec(s.end);
                 const sessionStart = fromEpochSec(s.start);
                 return sessionEnd >= currentRange.start! && sessionStart <= currentRange.end!;
             });
+
+            currentSessions.value = currSessions;
 
             console.log(`Current
                     range:
                     ${currentRange.start?.toLocal()} -> ${currentRange.end?.toLocal()}
 
                     sheshs:
-                    ${JSON.stringify(currentSessions.value.map(x => fromEpochSec(x.end).toLocal()), null, 2)}
+                    ${JSON.stringify(currSessions.map(x => fromEpochSec(x.end).toLocal()), null, 2)}
                     `);
         }
         fetchStats();

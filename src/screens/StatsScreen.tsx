@@ -34,7 +34,7 @@ export default function StatsScreen() {
     Interval.fromDateTimes(DateTime.now().minus({ day: 1 }), DateTime.now())
   );
 
-  const [all,setAll] = useState<SleepSessionRecord[]>([]);
+  const [all, setAll] = useState<SleepSessionRecord[]>([]);
 
   useEffect(() => {
     const setup = async () => {
@@ -94,7 +94,11 @@ export default function StatsScreen() {
 
         <View style={styles.statsWidgetsContainer}>
           {/* {!isLoading && (
-            <Graph width={PAGE_WIDTH} height={200} records={sessions} />
+            <Graph width={PAGE_WIDTH} height={200}
+              fetchedSessions={fetchedSessions}
+              currentRange={currentRange}
+              setCurrentRange={setCurrentRange}
+            />
           )} */}
         </View>
 
