@@ -5,7 +5,7 @@ import { StatsLogic } from '../../db/logic';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { GraphDataPoint, GraphResults, SleepSessionRecord } from '../../db/types';
 import * as Haptics from 'expo-haptics';
-import { Canvas, RoundedRect } from '@shopify/react-native-skia';
+import { Canvas, Group, RoundedRect } from '@shopify/react-native-skia';
 import { Interval } from 'luxon';
 
 interface GraphProps {
@@ -40,10 +40,11 @@ export default function Graph({
     const dataArray = Object.entries(graphData);
     // console.log(JSON.stringify(dataArray, null, 2));
 
+    
+
     // Interaction States
-    const translateX = useSharedValue(100);
-    const scaleX = useSharedValue(1);
-    const savedScaleX = useSharedValue(1);
+    const initalOffset = currentRange.start!.diff(fetchedRange.start!, 'seconds').seconds / fetchedRange.start!.diff(fetchedRange.end!, 'seconds').seconds * width
+    const translateX = useSharedValue<number>(initalOffset);
     const savedTranslateX = useSharedValue(0);
 
     // Gesture
@@ -65,38 +66,36 @@ export default function Graph({
 
     const gesture = Gesture.Simultaneous(pan, pinch);
 
+    const groupTranslation = useDerivedValue(() => [{ translateX: translateX.value }]);
+
     return (
         <GestureDetector gesture={gesture}>
             <View style={[styles.container, { width, height, borderRadius: width * 0.12 }, style]}>
                 <Canvas style={{ flex: 1 }}>
-                    {dataArray.map(([date, point], index) => (
-                        <Bar
-                            key={date}
-                            index={index}
-                            point={point}
-                            width={width}
-                            height={height}
-                            translateX={translateX}
-                            scaleX={scaleX}
-                        />
-                    ))}
+                    <Group transform={groupTranslation}>
+                        {dataArray.map(([date, point], index) => (
+                            <Bar
+                                key={date}
+                                index={index}
+                                point={point}
+                                width={width}
+                                height={height}
+                            />
+                        ))}
+                    </Group>
                 </Canvas>
             </View>
         </GestureDetector>
     );
 };
 
-const Bar = memo(({ index, point, width, height, translateX, scaleX, }: any) => {
+const Bar = memo(({ index, point, width, height, translateX }: any) => {
     const x = useDerivedValue(() => {
-        return (index * (BAR_WIDTH + GAP)) * scaleX.value + translateX.value;
+        return (index * (BAR_WIDTH + GAP));
     });
 
     const y = useDerivedValue(() => {
         return height - point.height - 20;
-    });
-
-    const rectWidth = useDerivedValue(() => {
-        return BAR_WIDTH * scaleX.value;
     });
 
     const rectHeight = useDerivedValue(() => {
@@ -107,7 +106,7 @@ const Bar = memo(({ index, point, width, height, translateX, scaleX, }: any) => 
         <RoundedRect
             x={x}
             y={y}
-            width={rectWidth}
+            width={BAR_WIDTH}
             height={rectHeight}
             r={8}
             color="white"
