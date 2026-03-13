@@ -30,9 +30,7 @@ export default function StatsScreen() {
     setRefreshing(false);
   }, []);
 
-  const { isLoading, currentSessions, fetchedSessions, currentRange, setCurrentRange } = useStats(
-    Interval.fromDateTimes(DateTime.now().minus({ day: 1 }), DateTime.now())
-  );
+  const { isLoading, currentSessions, fetchedSessions, fetchedRange, currentRange, setCurrentRange } = useStats();
 
   const [all, setAll] = useState<SleepSessionRecord[]>([]);
 
@@ -77,7 +75,7 @@ export default function StatsScreen() {
           style={{ marginTop: 20, padding: 40, borderRadius: 20, backgroundColor: '#19d1e6' }}
           onPress={() => {
             setCurrentRange(
-              Interval.fromDateTimes(currentRange.start!.minus({ day: 1 }), currentRange.end!.minus({ day: 1 }))
+              Interval.fromDateTimes(currentRange.start!.minus({ week: 1 }), currentRange.end!.minus({ week: 1 }))
             )
             // console.log(`
             //   Range;
@@ -93,13 +91,14 @@ export default function StatsScreen() {
         />
 
         <View style={styles.statsWidgetsContainer}>
-          {/* {!isLoading && (
+          {!isLoading && (
             <Graph width={PAGE_WIDTH} height={200}
               fetchedSessions={fetchedSessions}
+              fetchedRange={fetchedRange}
               currentRange={currentRange}
               setCurrentRange={setCurrentRange}
             />
-          )} */}
+          )}
         </View>
 
         <View style={styles.statsWidgetsContainer}>

@@ -12,7 +12,8 @@ interface GraphProps {
     width: number;
     height: number;
 
-    fetchedSessions: SharedValue<SleepSessionRecord[]>;
+    fetchedSessions: SleepSessionRecord[];
+    fetchedRange: Interval;
     currentRange: Interval;
     setCurrentRange: React.Dispatch<React.SetStateAction<Interval>>;
 
@@ -27,16 +28,17 @@ export default function Graph({
     height,
 
     fetchedSessions,
+    fetchedRange,
     currentRange,
     setCurrentRange,
 
     style,
 }: GraphProps) {
     const graphData: GraphResults = useMemo(() =>
-        records.length > 0 ? StatsLogic.getGraph(records) : {},
-        [records]);
+        fetchedSessions.length > 0 ? StatsLogic.getGraph(fetchedSessions, 100) : {},
+        [fetchedSessions]);
     const dataArray = Object.entries(graphData);
-    console.log(JSON.stringify(dataArray, null, 2));
+    // console.log(JSON.stringify(dataArray, null, 2));
 
     // Interaction States
     const translateX = useSharedValue(100);
@@ -90,7 +92,7 @@ const Bar = memo(({ index, point, width, height, translateX, scaleX, }: any) => 
     });
 
     const y = useDerivedValue(() => {
-        return height - point.height - 40;
+        return height - point.height - 20;
     });
 
     const rectWidth = useDerivedValue(() => {

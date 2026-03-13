@@ -23,7 +23,7 @@ const expandInterval = (interval: Interval, n: number) => {
 };
 
 const useStats = (initialRange?: Interval) => {
-    const now = DateTime.now();
+    const now = DateTime.now().startOf('day');
     const defaultRange = initialRange ?? Interval.fromDateTimes(
         now.minus({ week: 1 }),
         now
@@ -33,17 +33,17 @@ const useStats = (initialRange?: Interval) => {
     const [currentRange, setCurrentRange] = useState(defaultRange);
     const [fetchedRange, setFetchedRange] = useState(expandInterval(defaultRange, POLL_SIZE));
 
-    const fetchedSessions = useSharedValue<SleepSessionRecord[]>([]);
-    const currentSessions = useSharedValue<SleepSessionRecord[]>([]);
+    const [fetchedSessions, setFetchedSessions] = useState<SleepSessionRecord[]>([]);
+    const [currentSessions, setCurrentSessions] = useState<SleepSessionRecord[]>([]);
 
     useEffect(() => {
         const fetchStats = async () => {
             const startNearEdge = currentRange.start! <= fetchedRange.start!.plus({ milliseconds: PREFETCH_BUFFER_MS });
             const endNearEdge = currentRange.end! >= fetchedRange.end!.minus({ milliseconds: PREFETCH_BUFFER_MS });
 
-            let sessions = fetchedSessions.value;
+            let sessions = fetchedSessions;
 
-            if (startNearEdge || endNearEdge || fetchedSessions.value.length === 0) {
+            if (startNearEdge || endNearEdge || fetchedSessions.length === 0) {
                 let loadingShown = false;
                 const timer = setTimeout(() => {
                     setLoading(true);
@@ -67,7 +67,7 @@ const useStats = (initialRange?: Interval) => {
                         ${JSON.stringify(newSessions.map(x => fromEpochSec(x.end).toLocal()), null, 2)}
                     `);
 
-                    fetchedSessions.value = newSessions;
+                    setFetchedSessions(newSessions);
                     sessions = newSessions;
                     setFetchedRange(newRange);
                 } finally {
@@ -83,7 +83,7 @@ const useStats = (initialRange?: Interval) => {
                 return sessionEnd >= currentRange.start! && sessionStart <= currentRange.end!;
             });
 
-            currentSessions.value = currSessions;
+            setCurrentSessions(currSessions);
 
             console.log(`Current
                     range:
@@ -98,8 +98,11 @@ const useStats = (initialRange?: Interval) => {
 
     return {
         isLoading,
+
+        fetchedRange,
         currentRange,
         setCurrentRange,
+
         currentSessions,
         fetchedSessions,
     };
