@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, Dimensions, TouchableOpacity } from 'react-native';
+import React, { lazy, useCallback, useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, Dimensions, TouchableOpacity, Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import useLocation from '../hooks/useLocation';
 import useColorStore from '../hooks/useColors';
@@ -8,9 +8,12 @@ import { fromEpochSec, SleepLogic, StatsLogic } from '../db/logic';
 import { DateTime, Interval } from 'luxon';
 import { SleepSessionRecord } from '../db/types';
 import Averages from '../components/Stats/Averages'
-import Graph from '../components/Stats/Graph';
 import { useSharedValue } from 'react-native-reanimated';
 import useStats from '../hooks/useStats';
+
+const Graph = Platform.OS == 'web' ?
+    lazy(() => import('../components/Stats/Graph')) :
+    require('../components/Stats/Graph').default
 
 const PAGE_WIDTH = Dimensions.get('window').width * 0.9;
 
