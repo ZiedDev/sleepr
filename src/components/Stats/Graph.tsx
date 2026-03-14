@@ -5,7 +5,7 @@ import { StatsLogic } from '../../db/logic';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { GraphDataPoint, GraphResults, SleepSessionRecord } from '../../db/types';
 import * as Haptics from 'expo-haptics';
-import { Canvas, Group, RoundedRect } from '@shopify/react-native-skia';
+import { Canvas, Group, RoundedRect, SkFont, Text as SkiaText, useFont } from '@shopify/react-native-skia';
 import { Interval } from 'luxon';
 
 interface GraphProps {
@@ -34,13 +34,15 @@ export default function Graph({
 
     style,
 }: GraphProps) {
+    const font = useFont(require('../../../assets/fonts/Mona Sans/TTF/MonaSans-Regular.ttf'), 12);
+
     const graphData: GraphResults = useMemo(() =>
         fetchedSessions.length > 0 ? StatsLogic.getGraph(fetchedSessions, 100) : {},
         [fetchedSessions]);
     const dataArray = Object.entries(graphData);
     // console.log(JSON.stringify(dataArray, null, 2));
 
-    
+
 
     // Interaction States
     const initalOffset = currentRange.start!.diff(fetchedRange.start!, 'seconds').seconds / fetchedRange.start!.diff(fetchedRange.end!, 'seconds').seconds * width
@@ -78,8 +80,8 @@ export default function Graph({
                                 key={date}
                                 index={index}
                                 point={point}
-                                width={width}
                                 height={height}
+                                font={font!}
                             />
                         ))}
                     </Group>
@@ -89,7 +91,12 @@ export default function Graph({
     );
 };
 
-const Bar = memo(({ index, point, width, height, translateX }: any) => {
+const Bar = memo(({ index, point, height, font }: {
+    index: number;
+    point: GraphDataPoint;
+    height: number;
+    font: SkFont;
+}) => {
     const x = useDerivedValue(() => {
         return (index * (BAR_WIDTH + GAP));
     });
@@ -102,7 +109,11 @@ const Bar = memo(({ index, point, width, height, translateX }: any) => {
         return point.height;
     });
 
-    return (
+    const rectText = useDerivedValue(() => {
+        return point.durationTime;
+    });
+
+    return (<>
         <RoundedRect
             x={x}
             y={y}
@@ -111,7 +122,14 @@ const Bar = memo(({ index, point, width, height, translateX }: any) => {
             r={8}
             color="white"
         />
-    );
+        <SkiaText
+            x={x}
+            y={y}
+            text={rectText}
+            font={font}
+            color="white"
+        />
+    </>);
 });
 
 const styles = StyleSheet.create({
