@@ -10,14 +10,21 @@ import { StatusBar } from 'expo-status-bar';
 import { scheduleOnRN } from 'react-native-worklets';
 import * as Haptics from 'expo-haptics';
 import StaggeredText from '../components/StaggeredText';
+import comments from '../../assets/comments.json';
 
 export default function HomeScreen({ fadeOutNav }: { fadeOutNav: SharedValue<number> }) {
-  
+
   const currentSession = useStorage((state) => state.currentSession);
   const isTracking = !!currentSession;
+
   const [statusbarHide, setStatusbarHide] = useState(isTracking);
   const [commentHide, setCommentHide] = useState(isTracking);
-  
+  const [randomSentence, setRandomSentence] = useState({ sentence: '', wordStyles: {} });
+  useEffect(() => {
+    const randomSentence = comments[Math.floor(Math.random() * comments.length)];
+    setRandomSentence(randomSentence);
+  }, [commentHide])
+
   useEffect(() => {
     useColorStore.getState().setBlur(Number(isTracking));
   }, []);
@@ -62,9 +69,9 @@ export default function HomeScreen({ fadeOutNav }: { fadeOutNav: SharedValue<num
 
       {commentHide && (
         <StaggeredText
-          sentence='Hello World! My name is 67.'
+          sentence={randomSentence.sentence}
           style={{ color: 'white' }}
-          wordStyles={{ '67.': { color: '#f00', fontFamily: 'Mona Sans' } }}
+          wordStyles={randomSentence.wordStyles}
           containerStyle={{ marginBottom: 100 }}
         />
       )}
