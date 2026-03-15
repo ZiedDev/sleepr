@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Dimensions, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Dimensions, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import useLocation from '../hooks/useLocation';
 import { SleepLogic } from '../db/logic';
 import { useStorage } from '../db/storage';
@@ -13,6 +13,16 @@ import StaggeredText from '../components/StaggeredText';
 import comments from '../../assets/comments.json';
 
 export default function HomeScreen({ fadeOutNav }: { fadeOutNav: SharedValue<number> }) {
+
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    setRefreshing(true);
+    await useLocation.getState().refresh();
+    await useColorStore.getState().refresh();
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+    setRefreshing(false);
+  }, []);
 
   const currentSession = useStorage((state) => state.currentSession);
   const isTracking = !!currentSession;
@@ -57,7 +67,7 @@ export default function HomeScreen({ fadeOutNav }: { fadeOutNav: SharedValue<num
   };
 
   return (
-    <View style={styles.container}>
+    <View style={{ flex: 1 }}>
 
       <StatusBar
         hidden={statusbarHide}
@@ -67,46 +77,54 @@ export default function HomeScreen({ fadeOutNav }: { fadeOutNav: SharedValue<num
         translucent
       />
 
-      {commentHide && (
-        <StaggeredText
-          sentence={randomSentence.sentence}
-          style={{ color: 'white' }}
-          wordStyles={randomSentence.wordStyles}
-          containerStyle={{ marginBottom: 100 }}
+      <ScrollView
+        contentContainerStyle={styles.container}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+
+        {commentHide && (
+          <StaggeredText
+            sentence={randomSentence.sentence}
+            style={{ color: 'white' }}
+            wordStyles={randomSentence.wordStyles}
+            containerStyle={{ marginBottom: 100 }}
+          />
+        )}
+
+        <MorphSlider
+          isInitialComplete={isTracking}
+          trackWidth={0.6944444444 * Dimensions.get('screen').width}
+
+          animationPlugins={[
+            {
+              val: useColorStore(state => state.blur) as SharedValue<number>,
+              onUpdate: (t, d) => { 'worklet'; return t },
+              onReset: () => { 'worklet'; return withTiming(0, { duration: 500 }) },
+              onMorphThumb: () => { 'worklet'; return withTiming(0, { duration: 500 }) },
+
+              // onUpdate: (t, d) => { 'worklet'; return Math.round(t) },
+              // onReset: () => { 'worklet'; return 0 },
+              // onMorphThumb: () => { 'worklet'; return 0 },
+            }, {
+              val: fadeOutNav,
+              onEnd: (e) => {
+                'worklet';
+                if (e) return withDelay(500, withSpring(Number(!e), { damping: 15, stiffness: 200, mass: 1 }))
+                // else return withTiming(Number(!e), { duration: 1000, easing: Easing.out(Easing.cubic) })
+                else return withSpring(Number(!e), { damping: 15, stiffness: 100, mass: 1 })
+              },
+            }, {
+              val: null,
+              onEnd: (e) => { 'worklet'; scheduleOnRN(setStatusbarHide, !e); return 0; },
+              onMorphButton: () => { 'worklet'; scheduleOnRN(startTracking); return 0; },
+              onMorphThumb: () => { 'worklet'; scheduleOnRN(stopTracking); return 0; },
+            }
+          ]}
         />
-      )}
 
-      <MorphSlider
-        isInitialComplete={isTracking}
-        trackWidth={0.6944444444 * Dimensions.get('screen').width}
-
-        animationPlugins={[
-          {
-            val: useColorStore(state => state.blur) as SharedValue<number>,
-            onUpdate: (t, d) => { 'worklet'; return t },
-            onReset: () => { 'worklet'; return withTiming(0, { duration: 500 }) },
-            onMorphThumb: () => { 'worklet'; return withTiming(0, { duration: 500 }) },
-
-            // onUpdate: (t, d) => { 'worklet'; return Math.round(t) },
-            // onReset: () => { 'worklet'; return 0 },
-            // onMorphThumb: () => { 'worklet'; return 0 },
-          }, {
-            val: fadeOutNav,
-            onEnd: (e) => {
-              'worklet';
-              if (e) return withDelay(500, withSpring(Number(!e), { damping: 15, stiffness: 200, mass: 1 }))
-              // else return withTiming(Number(!e), { duration: 1000, easing: Easing.out(Easing.cubic) })
-              else return withSpring(Number(!e), { damping: 15, stiffness: 100, mass: 1 })
-            },
-          }, {
-            val: null,
-            onEnd: (e) => { 'worklet'; scheduleOnRN(setStatusbarHide, !e); return 0; },
-            onMorphButton: () => { 'worklet'; scheduleOnRN(startTracking); return 0; },
-            onMorphThumb: () => { 'worklet'; scheduleOnRN(stopTracking); return 0; },
-          }
-        ]}
-      />
-
+      </ScrollView>
     </View>
   );
 }
