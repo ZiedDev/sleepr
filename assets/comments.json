@@ -1,0 +1,22 @@
+[
+    {
+        "sentence": "Hello World! My name is 67.",
+        "wordStyles": {
+            "67.": {
+                "color": "#f00"
+            }
+        }
+    },
+    {
+        "sentence": "Sleep well tonight.",
+        "wordStyles": {}
+    },
+    {
+        "sentence": "Dream big and rest easy.",
+        "wordStyles": {}
+    },
+    {
+        "sentence": "Every night is a new reset.",
+        "wordStyles": {}
+    }
+]
