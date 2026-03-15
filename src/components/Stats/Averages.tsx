@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { StyleProp, StyleSheet, View, ViewStyle, Text } from 'react-native';
-import Animated, { SharedValue, useSharedValue, withTiming, Easing } from 'react-native-reanimated';
+import Animated, { SharedValue, useSharedValue, withTiming, Easing, interpolate } from 'react-native-reanimated';
 import { StatsLogic } from '../../db/logic';
 import { AveragesResult, SleepSessionRecord } from '../../db/types';
 import ClockSlider from '../ClockSlider';
@@ -38,16 +38,21 @@ export default function Averages({
     const startAngle = useSharedValue(0);
     const endAngle = useSharedValue(0);
     useEffect(() => {
-        startAngle.value = withTiming(avgs.start.meanSeconds / 86400 * Math.PI * 2, {
+        // console.log(avgs);
+        const startRadian = interpolate(avgs.start.meanSeconds, [0, 86400], [- 0.5 * Math.PI, 1.5 * Math.PI]) % 24;
+        const endRadian = interpolate(avgs.end.meanSeconds, [0, 86400], [- 0.5 * Math.PI, 1.5 * Math.PI]) % 24;
+        // console.log("meansec " + avgs.end.meanSeconds, "    end radian " + endRadian)
+        startAngle.value = withTiming(startRadian, {
             duration: 1000,
             easing: Easing.out(Easing.exp),
         });
 
-        endAngle.value = withTiming(avgs.end.meanSeconds / 86400 * Math.PI * 2, {
+        endAngle.value = withTiming(endRadian, {
             duration: 1000,
             easing: Easing.out(Easing.exp),
         });
-    });
+    }, [avgs]);
+    let consistencyPercentageValue = Math.round((avgs.start.concentration + avgs.end.concentration) * 50);
 
     return (
         <View style={[{ width, borderRadius: width * 0.12, padding: width * 0.055, }, styles.container, style]}>
@@ -87,9 +92,9 @@ export default function Averages({
             </View>
             <View style={styles.widgetConsistency}>
                 <Text style={styles.consistencyTitle}>Overall Consistency</Text>
-                <Text style={styles.consistencyPercentage}>95%</Text>
+                <Text style={styles.consistencyPercentage}>{consistencyPercentageValue}%</Text>
                 <View style={styles.consistencyProgressContainer}>
-                    <View style={styles.consistencyProgressBar}></View>
+                    <View style={[{ right: `${100 - consistencyPercentageValue}%`, }, styles.consistencyProgressBar]}></View>
                 </View>
             </View>
         </View>
@@ -180,6 +185,7 @@ const styles = StyleSheet.create({
         fontSize: 18,
         color: "#468df1",
         fontFamily: "MonaSans-BlackItalic",
+        textAlign: "right",
     },
     consistencyProgressContainer: {
         width: 100,
@@ -195,7 +201,6 @@ const styles = StyleSheet.create({
         top: 0,
         bottom: 0,
         left: 0,
-        right: "50%",
         backgroundColor: "#66cb66",
         borderCurve: "continuous",
         borderRadius: 100,
